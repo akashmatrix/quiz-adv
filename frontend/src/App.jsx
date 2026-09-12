@@ -26,7 +26,7 @@ function Navbar() {
   return (
     <nav className="bg-indigo-600 dark:bg-gray-900 text-white px-6 py-4 flex justify-between items-center shadow-md">
       <Link to="/" className="text-xl font-bold">
-        🧠 QuizApp
+        🧠 QuizNeon
       </Link>
       <div className="flex gap-4 items-center">
         <button
