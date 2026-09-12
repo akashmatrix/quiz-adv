@@ -39,9 +39,15 @@ export default function RoomLobby() {
     function handleErrorMsg(msg) {
       setError(msg);
     }
-    function handleQuestion() {
-      navigate(`/room/${roomCode}/play`, { state: { isHost, participantName } });
-    }
+    function handleQuestion(questionData) {
+  navigate(`/room/${roomCode}/play`, {
+    state: {
+      isHost,
+      participantName,
+      initialQuestion: questionData,
+    },
+  });
+}
     function handleHostLeft() {
       setError("The host has left the room. The quiz cannot continue.");
     }

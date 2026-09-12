@@ -9,9 +9,13 @@ export default function LiveQuiz() {
   const isHost = location.state?.isHost || false;
 
   const [phase, setPhase] = useState("question"); // question | leaderboard | finished
-  const [question, setQuestion] = useState(null);
+  const [question, setQuestion] = useState(
+    location.state?.initialQuestion || null
+  );
   const [selected, setSelected] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(
+    location.state?.initialQuestion?.timeLimit || 0
+  );
   const [leaderboard, setLeaderboard] = useState([]);
   const [correctAnswerIndex, setCorrectAnswerIndex] = useState(null);
   const [finalLeaderboard, setFinalLeaderboard] = useState([]);
@@ -67,11 +71,10 @@ export default function LiveQuiz() {
           {finalLeaderboard.map((p, idx) => (
             <div
               key={idx}
-              className={`flex justify-between items-center px-4 py-3 rounded ${
-                idx === 0
+              className={`flex justify-between items-center px-4 py-3 rounded ${idx === 0
                   ? "bg-yellow-100 dark:bg-yellow-900 font-bold"
                   : "bg-gray-100 dark:bg-gray-700"
-              } dark:text-white`}
+                } dark:text-white`}
             >
               <span>
                 {idx + 1}. {p.name} {idx === 0 && "🏆"}
@@ -131,9 +134,8 @@ export default function LiveQuiz() {
           Question {question.questionNumber} of {question.totalQuestions}
         </span>
         <span
-          className={`text-lg font-bold ${
-            timeLeft <= 5 ? "text-red-600" : "text-indigo-600 dark:text-indigo-400"
-          }`}
+          className={`text-lg font-bold ${timeLeft <= 5 ? "text-red-600" : "text-indigo-600 dark:text-indigo-400"
+            }`}
         >
           ⏱ {timeLeft}s
         </span>
@@ -151,11 +153,10 @@ export default function LiveQuiz() {
               key={idx}
               onClick={() => selectAnswer(idx)}
               disabled={selected !== null}
-              className={`w-full text-left px-4 py-3 rounded border transition ${
-                selected === idx
+              className={`w-full text-left px-4 py-3 rounded border transition ${selected === idx
                   ? "bg-indigo-600 text-white border-indigo-600"
                   : "bg-gray-50 dark:bg-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600 border-gray-300 dark:border-gray-600"
-              } disabled:cursor-not-allowed`}
+                } disabled:cursor-not-allowed`}
             >
               {opt}
             </button>
