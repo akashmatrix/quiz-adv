@@ -69,9 +69,27 @@ export default function RoomLobby() {
       const token = localStorage.getItem("token");
       socket.emit("host:enterRoom", { roomCode, token });
     } else {
+      let participantId = localStorage.getItem(
+        `quizneon-participant-${roomCode}`
+      );
+
+      if (!participantId) {
+        participantId = crypto.randomUUID();
+
+        localStorage.setItem(
+          `quizneon-participant-${roomCode}`,
+          participantId
+        );
+        localStorage.setItem(
+          `quizneon-participant-${roomCode}`,
+          participantId
+        );
+      }
+
       socket.emit("participant:joinRoom", {
         roomCode,
         participantName,
+        participantId,
       });
     }
 

@@ -26,7 +26,7 @@ export default function LiveQuiz() {
       setQuestion(data);
       setSelected(null);
       setPhase("question");
-      setTimeLeft(data.timeLimit);
+    setTimeLeft(data.timeRemaining ?? data.timeLimit);  
     }
 
     function handleLeaderboard(data) {
@@ -39,6 +39,24 @@ export default function LiveQuiz() {
       setFinalLeaderboard(data.leaderboard);
       setPhase("finished");
     }
+    // Reconnect participant after page refresh
+if (!isHost) {
+  const participantId = localStorage.getItem(
+    `quizneon-participant-${roomCode}`
+  );
+
+  const participantName = localStorage.getItem(
+    `quizneon-name-${roomCode}`
+  );
+
+  if (participantId && participantName) {
+    socket.emit("participant:joinRoom", {
+      roomCode,
+      participantName,
+      participantId,
+    });
+  }
+}
 
     socket.on("quiz:question", handleQuestion);
     socket.on("quiz:leaderboard", handleLeaderboard);
