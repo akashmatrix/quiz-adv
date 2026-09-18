@@ -2,17 +2,19 @@ const jwt = require("jsonwebtoken");
 const Room = require("../models/Room");
 const RoomResult = require("../models/RoomResult");
 
-// Live game state kept in memory for speed (roomCode -> gameState).
-// Questions + correct answers live here too, so they are NEVER sent to participants
-// until AFTER they submit an answer.
 const games = {};
 
 const MAX_PARTICIPANTS = 50;
-const LEADERBOARD_DISPLAY_MS = 5000; // auto-advance to next question after 5 seconds
+const LEADERBOARD_DISPLAY_MS = 5000;
+const GAME_CLEANUP_MS = 10 * 60 * 1000;
+
+
+// ================= LEADERBOARD =================
 
 function buildLeaderboard(game) {
   return Object.values(game.participants)
     .map((p) => ({
+      participantId: p.participantId,
       name: p.name,
       score: p.score,
       lastCorrect: p.lastCorrect,
@@ -21,6 +23,9 @@ function buildLeaderboard(game) {
     .sort((a, b) => b.score - a.score);
 }
 
+
+// ================= TIMER =================
+
 function clearGameTimer(game) {
   if (game.timer) {
     clearTimeout(game.timer);
@@ -28,15 +33,19 @@ function clearGameTimer(game) {
   }
 }
 
+
+// ================= SEND QUESTION =================
+
 function sendQuestion(io, roomCode) {
   const game = games[roomCode];
+
   if (!game) return;
 
   const q = game.questions[game.currentIndex];
+
   game.questionStartTime = Date.now();
   game.status = "active";
 
-  // reset per-round flags for every participant
   Object.values(game.participants).forEach((p) => {
     p.hasAnsweredThisRound = false;
     p.lastCorrect = null;
@@ -45,24 +54,34 @@ function sendQuestion(io, roomCode) {
 
   io.to(roomCode).emit("quiz:question", {
     questionText: q.questionText,
-    options: q.options, // correctAnswerIndex is intentionally NOT sent here
+    options: q.options,
     timeLimit: q.timeLimit,
+    timeRemaining: q.timeLimit,
     questionNumber: game.currentIndex + 1,
     totalQuestions: game.questions.length,
   });
 
   clearGameTimer(game);
-  game.timer = setTimeout(() => endQuestion(io, roomCode), q.timeLimit * 1000);
+
+  game.timer = setTimeout(() => {
+    endQuestion(io, roomCode);
+  }, q.timeLimit * 1000);
 }
+
+
+// ================= END QUESTION =================
 
 function endQuestion(io, roomCode) {
   const game = games[roomCode];
+
   if (!game || game.status !== "active") return;
 
   clearGameTimer(game);
+
   game.status = "leaderboard";
 
   const q = game.questions[game.currentIndex];
+
   const leaderboard = buildLeaderboard(game);
 
   io.to(roomCode).emit("quiz:leaderboard", {
@@ -72,12 +91,17 @@ function endQuestion(io, roomCode) {
     totalQuestions: game.questions.length,
   });
 
-  // Auto-advance to the next question after a short pause
-  game.timer = setTimeout(() => advanceQuestion(io, roomCode), LEADERBOARD_DISPLAY_MS);
+  game.timer = setTimeout(() => {
+    advanceQuestion(io, roomCode);
+  }, LEADERBOARD_DISPLAY_MS);
 }
+
+
+// ================= ADVANCE QUESTION =================
 
 async function advanceQuestion(io, roomCode) {
   const game = games[roomCode];
+
   if (!game) return;
 
   game.currentIndex += 1;
@@ -89,55 +113,103 @@ async function advanceQuestion(io, roomCode) {
   }
 }
 
+
+// ================= FINISH QUIZ =================
+
 async function finishQuiz(io, roomCode) {
   const game = games[roomCode];
-  if (!game) return;
+
+  if (!game || game.status === "finished") return;
 
   clearGameTimer(game);
+
   game.status = "finished";
 
   const leaderboard = buildLeaderboard(game);
-  io.to(roomCode).emit("quiz:finished", { leaderboard });
+
+  io.to(roomCode).emit("quiz:finished", {
+    leaderboard,
+  });
 
   try {
-    await Room.findByIdAndUpdate(game.roomId, { status: "finished" });
+    await Room.findByIdAndUpdate(game.roomId, {
+      status: "finished",
+    });
 
     const resultDocs = leaderboard.map((p, idx) => {
-      const participant = Object.values(game.participants).find((x) => x.name === p.name);
+      const participant = game.participants[p.participantId];
+
       return {
         room: game.roomId,
         roomCode,
         participantName: p.name,
         score: p.score,
-        correctAnswers: participant ? participant.correctCount : 0,
+        correctAnswers: participant
+          ? participant.correctCount
+          : 0,
         totalQuestions: game.questions.length,
         rank: idx + 1,
       };
     });
-    await RoomResult.insertMany(resultDocs);
+
+    if (resultDocs.length > 0) {
+      await RoomResult.insertMany(resultDocs);
+    }
+
   } catch (err) {
-    console.error("Error saving room results:", err.message);
+    console.error(
+      "Error saving room results:",
+      err.message
+    );
   }
 
-  // Free up memory a while after the quiz ends
-  setTimeout(() => delete games[roomCode], 10 * 60 * 1000);
+  game.cleanupTimer = setTimeout(() => {
+    delete games[roomCode];
+  }, GAME_CLEANUP_MS);
 }
 
+
+// ================= SOCKET HANDLERS =================
+
 function registerSocketHandlers(io) {
+
   io.on("connection", (socket) => {
-    // ---------- HOST: attach to a room they already created via REST ----------
+
+
+    // ================= HOST ENTER ROOM =================
+
     socket.on("host:enterRoom", async ({ roomCode, token }) => {
       try {
-        const code = (roomCode || "").toUpperCase().trim();
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const room = await Room.findOne({ roomCode: code });
 
-        if (!room) return socket.emit("error:message", "Room not found");
+        const code = (roomCode || "")
+          .toUpperCase()
+          .trim();
+
+        const decoded = jwt.verify(
+          token,
+          process.env.JWT_SECRET
+        );
+
+        const room = await Room.findOne({
+          roomCode: code,
+        });
+
+        if (!room) {
+          return socket.emit(
+            "error:message",
+            "Room not found"
+          );
+        }
+
         if (room.host.toString() !== decoded.id) {
-          return socket.emit("error:message", "You are not the host of this room");
+          return socket.emit(
+            "error:message",
+            "You are not the host of this room"
+          );
         }
 
         if (!games[code]) {
+
           games[code] = {
             roomId: room._id,
             hostSocketId: socket.id,
@@ -147,168 +219,536 @@ function registerSocketHandlers(io) {
             status: "waiting",
             participants: {},
             timer: null,
+            cleanupTimer: null,
             questionStartTime: null,
           };
+
         } else {
+
           games[code].hostSocketId = socket.id;
+
         }
 
         socket.join(code);
+
         socket.data.roomCode = code;
         socket.data.isHost = true;
 
         socket.emit("room:hostReady", {
           roomCode: code,
-          participants: Object.values(games[code].participants).map((p) => p.name),
-          totalQuestions: games[code].questions.length,
+
+          participants: Object.values(
+            games[code].participants
+          ).map((p) => p.name),
+
+          totalQuestions:
+            games[code].questions.length,
         });
+
       } catch (err) {
-        socket.emit("error:message", "Invalid session, please login again");
+
+        console.error(err);
+
+        socket.emit(
+          "error:message",
+          "Invalid session, please login again"
+        );
+
       }
     });
 
-    // ---------- PARTICIPANT: join a room with just a name (no login needed) ----------
-    socket.on("participant:joinRoom", async ({ roomCode, participantName }) => {
-      try {
-        const code = (roomCode || "").toUpperCase().trim();
-        const name = (participantName || "").trim();
 
-        if (!code || !name) {
-          return socket.emit("error:message", "Room code and name are required");
-        }
 
-        let game = games[code];
+    // ================= PARTICIPANT JOIN ROOM =================
 
-        if (!game) {
-          const room = await Room.findOne({ roomCode: code });
-          if (!room) return socket.emit("error:message", "Room not found. Check the code.");
-          if (room.status === "finished") {
-            return socket.emit("error:message", "This quiz has already finished");
+    socket.on(
+      "participant:joinRoom",
+      async ({
+        roomCode,
+        participantName,
+        participantId,
+      }) => {
+
+        try {
+
+          const code = (roomCode || "")
+            .toUpperCase()
+            .trim();
+
+          const name = (participantName || "").trim();
+
+          if (!code || !name) {
+            return socket.emit(
+              "error:message",
+              "Room code and name are required"
+            );
           }
 
-          game = {
-            roomId: room._id,
-            hostSocketId: null,
-            hostName: room.hostName,
-            questions: room.questions,
-            currentIndex: -1,
-            status: "waiting",
-            participants: {},
-            timer: null,
-            questionStartTime: null,
+          let game = games[code];
+
+          if (!game) {
+
+            const room = await Room.findOne({
+              roomCode: code,
+            });
+
+            if (!room) {
+              return socket.emit(
+                "error:message",
+                "Room not found. Check the code."
+              );
+            }
+
+            if (room.status === "finished") {
+              return socket.emit(
+                "error:message",
+                "This quiz has already finished"
+              );
+            }
+
+            game = {
+              roomId: room._id,
+              hostSocketId: null,
+              hostName: room.hostName,
+              questions: room.questions,
+              currentIndex: -1,
+              status: "waiting",
+              participants: {},
+              timer: null,
+              cleanupTimer: null,
+              questionStartTime: null,
+            };
+
+            games[code] = game;
+
+          }
+
+
+          // ================= STABLE PARTICIPANT ID =================
+
+          const stableParticipantId =
+            participantId || socket.id;
+
+          const existingParticipant =
+            game.participants[stableParticipantId];
+
+
+          // ================= RECONNECT EXISTING PLAYER =================
+
+          if (existingParticipant) {
+
+            existingParticipant.socketId = socket.id;
+            existingParticipant.connected = true;
+
+            socket.join(code);
+
+            socket.data.roomCode = code;
+            socket.data.isHost = false;
+            socket.data.participantId =
+              stableParticipantId;
+
+            socket.emit("room:joined", {
+              roomCode: code,
+              hostName: game.hostName,
+
+              participants: Object.values(
+                game.participants
+              ).map((p) => p.name),
+
+              totalQuestions:
+                game.questions.length,
+            });
+
+            sendCurrentGameState(
+              socket,
+              game,
+              code
+            );
+
+            return;
+          }
+
+
+          // ================= NEW PLAYER JOIN =================
+
+          if (game.status !== "waiting") {
+
+            return socket.emit(
+              "error:message",
+              "This quiz has already started"
+            );
+
+          }
+
+          if (
+            Object.keys(game.participants).length >=
+            MAX_PARTICIPANTS
+          ) {
+
+            return socket.emit(
+              "error:message",
+              "Room is full (50/50 players)"
+            );
+
+          }
+
+
+          // ================= CREATE PARTICIPANT =================
+
+          game.participants[stableParticipantId] = {
+
+            participantId: stableParticipantId,
+
+            socketId: socket.id,
+
+            name,
+
+            score: 0,
+
+            correctCount: 0,
+
+            hasAnsweredThisRound: false,
+
+            lastCorrect: null,
+
+            lastPoints: 0,
+
+            connected: true,
+
           };
-          games[code] = game;
+
+
+          socket.join(code);
+
+          socket.data.roomCode = code;
+          socket.data.isHost = false;
+          socket.data.participantId =
+            stableParticipantId;
+
+
+          const participantNames = Object.values(
+            game.participants
+          ).map((p) => p.name);
+
+
+          socket.emit("room:joined", {
+
+            roomCode: code,
+
+            hostName: game.hostName,
+
+            participants: participantNames,
+
+            totalQuestions:
+              game.questions.length,
+
+          });
+
+
+          io.to(code).emit(
+            "room:participantsUpdate",
+            participantNames
+          );
+
+
+        } catch (err) {
+
+          console.error(err);
+
+          socket.emit(
+            "error:message",
+            "Could not join room"
+          );
+
         }
 
-        if (game.status !== "waiting") {
-          return socket.emit("error:message", "This quiz has already started");
+      }
+    );
+
+
+
+    // ================= HOST START QUIZ =================
+
+    socket.on(
+      "host:startQuiz",
+      ({ roomCode }) => {
+
+        const code = (roomCode || "")
+          .toUpperCase()
+          .trim();
+
+        const game = games[code];
+
+        if (!game) {
+          return socket.emit(
+            "error:message",
+            "Room not found"
+          );
         }
 
-        if (Object.keys(game.participants).length >= MAX_PARTICIPANTS) {
-          return socket.emit("error:message", "Room is full (50/50 players)");
+        if (socket.id !== game.hostSocketId) {
+          return socket.emit(
+            "error:message",
+            "Only the host can start the quiz"
+          );
         }
 
-        const nameTaken = Object.values(game.participants).some(
-          (p) => p.name.toLowerCase() === name.toLowerCase()
+        if (
+          Object.keys(game.participants).length === 0
+        ) {
+          return socket.emit(
+            "error:message",
+            "Wait for at least 1 participant to join"
+          );
+        }
+
+        game.currentIndex = 0;
+
+        sendQuestion(io, code);
+
+      }
+    );
+
+
+
+    // ================= PARTICIPANT SUBMIT ANSWER =================
+
+    socket.on(
+      "participant:submitAnswer",
+      ({ roomCode, selectedIndex }) => {
+
+        const code = (roomCode || "")
+          .toUpperCase()
+          .trim();
+
+        const game = games[code];
+
+        if (!game || game.status !== "active") {
+          return;
+        }
+
+
+        const participantId =
+          socket.data.participantId;
+
+        const participant =
+          game.participants[participantId];
+
+
+        if (
+          !participant ||
+          participant.hasAnsweredThisRound
+        ) {
+          return;
+        }
+
+
+        const q =
+          game.questions[game.currentIndex];
+
+
+        const timeLimitMs =
+          q.timeLimit * 1000;
+
+
+        const timeTakenMs = Math.min(
+          Date.now() - game.questionStartTime,
+          timeLimitMs
         );
-        if (nameTaken) {
-          return socket.emit("error:message", "This name is already taken in the room");
+
+
+        const correct =
+          selectedIndex === q.correctAnswerIndex;
+
+
+        let points = 0;
+
+
+        if (correct) {
+
+          points = Math.round(
+            500 +
+            500 *
+            (1 - timeTakenMs / timeLimitMs)
+          );
+
+          participant.correctCount += 1;
+
         }
 
-        game.participants[socket.id] = {
-          name,
-          score: 0,
-          correctCount: 0,
-          hasAnsweredThisRound: false,
-          lastCorrect: null,
-          lastPoints: 0,
-        };
 
-        socket.join(code);
-        socket.data.roomCode = code;
-        socket.data.isHost = false;
+        participant.score += points;
 
-        const participantNames = Object.values(game.participants).map((p) => p.name);
+        participant.hasAnsweredThisRound = true;
 
-        socket.emit("room:joined", {
-          roomCode: code,
-          hostName: game.hostName,
-          participants: participantNames,
-          totalQuestions: game.questions.length,
+        participant.lastCorrect = correct;
+
+        participant.lastPoints = points;
+
+
+        socket.emit("answer:ack", {
+          correct,
+          points,
         });
 
-        io.to(code).emit("room:participantsUpdate", participantNames);
-      } catch (err) {
-        console.error(err);
-        socket.emit("error:message", "Could not join room");
+
+        const allAnswered =
+          Object.values(
+            game.participants
+          ).every(
+            (p) => p.hasAnsweredThisRound
+          );
+
+
+        if (allAnswered) {
+          endQuestion(io, code);
+        }
+
       }
-    });
+    );
 
-    // ---------- HOST: start the quiz ----------
-    socket.on("host:startQuiz", ({ roomCode }) => {
-      const code = (roomCode || "").toUpperCase().trim();
-      const game = games[code];
-      if (!game) return socket.emit("error:message", "Room not found");
-      if (socket.id !== game.hostSocketId) {
-        return socket.emit("error:message", "Only the host can start the quiz");
-      }
-      if (Object.keys(game.participants).length === 0) {
-        return socket.emit("error:message", "Wait for at least 1 participant to join");
-      }
 
-      game.currentIndex = 0;
-      sendQuestion(io, code);
-    });
 
-    // ---------- PARTICIPANT: submit an answer ----------
-    socket.on("participant:submitAnswer", ({ roomCode, selectedIndex }) => {
-      const code = (roomCode || "").toUpperCase().trim();
-      const game = games[code];
-      if (!game || game.status !== "active") return;
+    // ================= DISCONNECT =================
 
-      const participant = game.participants[socket.id];
-      if (!participant || participant.hasAnsweredThisRound) return;
-
-      const q = game.questions[game.currentIndex];
-      const timeLimitMs = q.timeLimit * 1000;
-      const timeTakenMs = Math.min(Date.now() - game.questionStartTime, timeLimitMs);
-      const correct = selectedIndex === q.correctAnswerIndex;
-
-      // Kahoot-style scoring: faster correct answers earn more points (500-1000)
-      let points = 0;
-      if (correct) {
-        points = Math.round(500 + 500 * (1 - timeTakenMs / timeLimitMs));
-        participant.correctCount += 1;
-      }
-
-      participant.score += points;
-      participant.hasAnsweredThisRound = true;
-      participant.lastCorrect = correct;
-      participant.lastPoints = points;
-
-      socket.emit("answer:ack", { correct, points });
-
-      // If everyone has answered, end the question early instead of waiting for the timer
-      const allAnswered = Object.values(game.participants).every((p) => p.hasAnsweredThisRound);
-      if (allAnswered) endQuestion(io, code);
-    });
-
-    // ---------- DISCONNECT ----------
     socket.on("disconnect", () => {
-      const roomCode = socket.data.roomCode;
+
+      const roomCode =
+        socket.data.roomCode;
+
       if (!roomCode) return;
+
       const game = games[roomCode];
+
       if (!game) return;
 
+
       if (socket.data.isHost) {
-        io.to(roomCode).emit("room:hostLeft");
-      } else if (game.participants[socket.id]) {
-        delete game.participants[socket.id];
-        const participantNames = Object.values(game.participants).map((p) => p.name);
-        io.to(roomCode).emit("room:participantsUpdate", participantNames);
+
+        if (
+          game.hostSocketId === socket.id
+        ) {
+
+          io.to(roomCode).emit(
+            "room:hostLeft"
+          );
+
+        }
+
+      } else {
+
+        const participantId =
+          socket.data.participantId;
+
+        const participant =
+          game.participants[participantId];
+
+
+        if (participant) {
+
+          // Do NOT delete participant.
+          // Preserve score and identity after refresh.
+
+          participant.connected = false;
+
+        }
+
       }
+
     });
+
+
   });
+
 }
+
+
+
+// ================= CURRENT GAME STATE =================
+
+function sendCurrentGameState(
+  socket,
+  game,
+  roomCode
+) {
+
+  if (game.status === "active") {
+
+    const q =
+      game.questions[game.currentIndex];
+
+
+    const elapsed =
+      Date.now() - game.questionStartTime;
+
+
+    const remainingTime = Math.max(
+      0,
+      Math.ceil(
+        (q.timeLimit * 1000 - elapsed) / 1000
+      )
+    );
+
+
+    socket.emit("quiz:question", {
+
+      questionText: q.questionText,
+
+      options: q.options,
+
+      timeLimit: q.timeLimit,
+
+      timeRemaining: remainingTime,
+
+      questionNumber:
+        game.currentIndex + 1,
+
+      totalQuestions:
+        game.questions.length,
+
+    });
+
+  }
+
+
+  if (game.status === "leaderboard") {
+
+    const q =
+      game.questions[game.currentIndex];
+
+
+    socket.emit("quiz:leaderboard", {
+
+      leaderboard:
+        buildLeaderboard(game),
+
+      correctAnswerIndex:
+        q.correctAnswerIndex,
+
+      questionNumber:
+        game.currentIndex + 1,
+
+      totalQuestions:
+        game.questions.length,
+
+    });
+
+  }
+
+
+  if (game.status === "finished") {
+
+    socket.emit("quiz:finished", {
+
+      leaderboard:
+        buildLeaderboard(game),
+
+    });
+
+  }
+
+}
+
+
 
 module.exports = registerSocketHandlers;
