@@ -66,7 +66,7 @@ function Navbar() {
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors">
+    <div className="min-h-screen bg-[#11131c] transition-colors">
       <Navbar />
       <div className="p-4">
         <Routes>
