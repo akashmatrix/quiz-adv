@@ -26,7 +26,7 @@ export default function LiveQuiz() {
       setQuestion(data);
       setSelected(null);
       setPhase("question");
-    setTimeLeft(data.timeRemaining ?? data.timeLimit);  
+      setTimeLeft(data.timeRemaining ?? data.timeLimit);
     }
 
     function handleLeaderboard(data) {
@@ -39,35 +39,36 @@ export default function LiveQuiz() {
       setFinalLeaderboard(data.leaderboard);
       setPhase("finished");
     }
-    // Reconnect participant after page refresh
-if (!isHost) {
-  const participantId = localStorage.getItem(
-    `quizneon-participant-${roomCode}`
-  );
-
-  const participantName = localStorage.getItem(
-    `quizneon-name-${roomCode}`
-  );
-
-  if (participantId && participantName) {
-    socket.emit("participant:joinRoom", {
-      roomCode,
-      participantName,
-      participantId,
-    });
-  }
-}
 
     socket.on("quiz:question", handleQuestion);
     socket.on("quiz:leaderboard", handleLeaderboard);
     socket.on("quiz:finished", handleFinished);
+    // Reconnect participant after page refresh
+    if (!isHost) {
+      const participantId = localStorage.getItem(
+        `quizneon-participant-${roomCode}`
+      );
+
+      const participantName = localStorage.getItem(
+        `quizneon-name-${roomCode}`
+      );
+
+      if (participantId && participantName) {
+        socket.emit("participant:joinRoom", {
+          roomCode,
+          participantName,
+          participantId,
+        });
+      }
+    }
+
 
     return () => {
       socket.off("quiz:question", handleQuestion);
       socket.off("quiz:leaderboard", handleLeaderboard);
       socket.off("quiz:finished", handleFinished);
     };
-  }, []);
+  }, [roomCode, isHost]);
 
   // Countdown Timer
   useEffect(() => {
@@ -115,8 +116,8 @@ if (!isHost) {
               <div
                 key={idx}
                 className={`flex justify-between items-center px-4 py-4 rounded-xl border ${idx === 0
-                    ? "bg-yellow-500/10 border-yellow-400/40"
-                    : "bg-white/5 border-white/10"
+                  ? "bg-yellow-500/10 border-yellow-400/40"
+                  : "bg-white/5 border-white/10"
                   }`}
               >
                 <span className="font-semibold">
@@ -246,8 +247,8 @@ if (!isHost) {
 
           <div
             className={`px-4 py-2 rounded-xl border font-bold ${timeLeft <= 5
-                ? "text-red-400 border-red-500/40 bg-red-500/10 animate-pulse"
-                : "text-pink-400 border-pink-500/30 bg-pink-500/10"
+              ? "text-red-400 border-red-500/40 bg-red-500/10 animate-pulse"
+              : "text-pink-400 border-pink-500/30 bg-pink-500/10"
               }`}
           >
             ⏱ {timeLeft}s
@@ -298,8 +299,8 @@ if (!isHost) {
                 onClick={() => selectAnswer(idx)}
                 disabled={selected !== null}
                 className={`w-full flex items-center gap-3 text-left px-4 py-4 rounded-xl border transition duration-200 ${selected === idx
-                    ? "bg-gradient-to-r from-pink-500 to-purple-600 border-pink-400 text-white"
-                    : "bg-white/5 border-white/10 text-gray-200 hover:bg-purple-500/20 hover:border-purple-400"
+                  ? "bg-gradient-to-r from-pink-500 to-purple-600 border-pink-400 text-white"
+                  : "bg-white/5 border-white/10 text-gray-200 hover:bg-purple-500/20 hover:border-purple-400"
                   } disabled:cursor-not-allowed`}
               >
                 <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-black/20 font-bold">
