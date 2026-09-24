@@ -9,6 +9,8 @@ const LEADERBOARD_DISPLAY_MS = 5000;
 const GAME_CLEANUP_MS = 10 * 60 * 1000;
 
 
+
+
 // ================= LEADERBOARD =================
 
 function buildLeaderboard(game) {
@@ -18,12 +20,12 @@ function buildLeaderboard(game) {
       name: p.name,
       score: p.score,
       correctCount: p.correctCount,
+      totalQuestions: game.questions.length,
       lastCorrect: p.lastCorrect,
       lastPoints: p.lastPoints,
     }))
     .sort((a, b) => b.score - a.score);
 }
-
 
 // ================= TIMER =================
 

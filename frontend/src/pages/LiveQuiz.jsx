@@ -23,11 +23,16 @@ export default function LiveQuiz() {
 
   const [leaderboard, setLeaderboard] = useState([]);
 
-  const [correctAnswerIndex, setCorrectAnswerIndex] = useState(null);
-
   const [finalLeaderboard, setFinalLeaderboard] = useState([]);
 
-  // Participant name
+  // =========================================================
+  // PARTICIPANT ID + NAME
+  // =========================================================
+
+  const participantId = localStorage.getItem(
+    `quizneon-participant-${roomCode}`
+  );
+
   const participantName = localStorage.getItem(
     `quizneon-name-${roomCode}`
   );
@@ -41,12 +46,11 @@ export default function LiveQuiz() {
       setQuestion(data);
       setSelected(null);
       setPhase("question");
-      setTimeLeft(data.timeRemaining ?? data.timeLimit);
+      setTimeLeft(data.timeRemaining ?? data.timeLimit ?? 0);
     }
 
     function handleLeaderboard(data) {
       setLeaderboard(data.leaderboard || []);
-      setCorrectAnswerIndex(data.correctAnswerIndex);
       setPhase("leaderboard");
     }
 
@@ -64,7 +68,7 @@ export default function LiveQuiz() {
     // =======================================================
 
     if (!isHost) {
-      const participantId = localStorage.getItem(
+      const savedParticipantId = localStorage.getItem(
         `quizneon-participant-${roomCode}`
       );
 
@@ -74,11 +78,11 @@ export default function LiveQuiz() {
 
       const token = localStorage.getItem("token");
 
-      if (participantId && savedParticipantName) {
+      if (savedParticipantId && savedParticipantName) {
         socket.emit("participant:joinRoom", {
           roomCode,
           participantName: savedParticipantName,
-          participantId,
+          participantId: savedParticipantId,
           token,
         });
       }
@@ -99,7 +103,7 @@ export default function LiveQuiz() {
     if (phase !== "question" || timeLeft <= 0) return;
 
     const timer = setTimeout(() => {
-      setTimeLeft((prev) => prev - 1);
+      setTimeLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
 
     return () => clearTimeout(timer);
@@ -129,14 +133,20 @@ export default function LiveQuiz() {
       (a, b) => b.score - a.score
     );
 
-    // Top 3
+    // -------------------------------------------------------
+    // TOP 3
+    // -------------------------------------------------------
+
     const topThree = sortedLeaderboard.slice(0, 3);
 
-    // Find current participant
+    // -------------------------------------------------------
+    // FIND CURRENT PARTICIPANT BY participantId
+    // -------------------------------------------------------
+
     const myIndex =
-      !isHost && participantName
+      !isHost && participantId
         ? sortedLeaderboard.findIndex(
-          (p) => p.name === participantName
+          (p) => p.participantId === participantId
         )
         : -1;
 
@@ -190,15 +200,14 @@ export default function LiveQuiz() {
             {topThree.map((p, index) => {
               const rank = index + 1;
 
-              // Host ko YOU nahi dikhega
               const isMe =
                 !isHost &&
-                participantName &&
-                p.name === participantName;
+                participantId &&
+                p.participantId === participantId;
 
               return (
                 <div
-                  key={`${p.name}-${index}`}
+                  key={p.participantId || `${p.name}-${index}`}
                   className={`flex items-center justify-between gap-4 px-4 py-4 rounded-2xl border transition hover:scale-[1.01] ${rank === 1
                       ? "bg-yellow-500/10 border-yellow-400/40"
                       : rank === 2
@@ -231,7 +240,11 @@ export default function LiveQuiz() {
                       </p>
 
                       <p className="text-xs text-gray-400 mt-1">
-                        {p.correctCount ?? 0} correct answers
+                        {p.correctCount ?? 0}/
+                        {p.totalQuestions ??
+                          sortedLeaderboard[0]?.totalQuestions ??
+                          "?"}{" "}
+                        correct
                       </p>
 
                     </div>
@@ -242,7 +255,7 @@ export default function LiveQuiz() {
                   <div className="text-right shrink-0">
 
                     <p className="font-extrabold text-pink-400">
-                      {p.score} pts
+                      {p.score ?? 0} pts
                     </p>
 
                   </div>
@@ -265,29 +278,33 @@ export default function LiveQuiz() {
 
           {/* =================================================
               YOUR RESULT
-              Only participant
-              Only if rank > 3
+              PARTICIPANT ONLY
+              RANK > 3
           ================================================= */}
 
           {!isHost && myResult && myRank > 3 && (
             <div className="mt-4 p-6 rounded-2xl border border-pink-400/30 bg-gradient-to-r from-pink-500/10 to-purple-500/10">
 
               <p className="text-xs uppercase tracking-[0.2em] text-pink-300 font-bold text-center">
-                Your Result
+                Your Rank
               </p>
 
               <div className="mt-5 text-center">
 
                 <p className="text-3xl font-extrabold">
-                  Rank #{myRank}
+                  #{myRank}
                 </p>
 
                 <p className="mt-3 text-2xl font-extrabold text-pink-400">
-                  {myResult.score} pts
+                  {myResult.score ?? 0} pts
                 </p>
 
                 <p className="mt-2 text-sm text-gray-400">
-                  {myResult.correctCount ?? 0} correct answers
+                  {myResult.correctCount ?? 0}/
+                  {myResult.totalQuestions ??
+                    sortedLeaderboard[0]?.totalQuestions ??
+                    "?"}{" "}
+                  correct
                 </p>
 
               </div>
@@ -297,7 +314,7 @@ export default function LiveQuiz() {
 
           {/* =================================================
               TOP 3 CONGRATULATIONS
-              ONLY PARTICIPANT
+              PARTICIPANT ONLY
           ================================================= */}
 
           {!isHost && myResult && myRank <= 3 && (
@@ -388,7 +405,7 @@ export default function LiveQuiz() {
 
             {leaderboard.map((p, idx) => (
               <div
-                key={idx}
+                key={p.participantId || idx}
                 className="flex justify-between items-center px-4 py-4 rounded-xl bg-white/5 border border-white/10"
               >
 
@@ -413,7 +430,7 @@ export default function LiveQuiz() {
                 </div>
 
                 <span className="font-bold text-purple-400">
-                  {p.score} pts
+                  {p.score ?? 0} pts
                 </span>
 
               </div>
@@ -509,9 +526,7 @@ export default function LiveQuiz() {
                 0,
                 Math.min(
                   100,
-                  (timeLeft /
-                    (question.timeLimit || 1)) *
-                  100
+                  (timeLeft / (question.timeLimit || 1)) * 100
                 )
               )}%`,
             }}
