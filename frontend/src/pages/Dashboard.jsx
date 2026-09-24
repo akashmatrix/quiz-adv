@@ -35,7 +35,7 @@ export default function Dashboard() {
     async function loadResults() {
       try {
         setLoading(true);
-        const response = await api.get("/quiz/my-results");
+        const response = await api.get("/rooms/my-results");
         if (active) setResults(Array.isArray(response.data) ? response.data : []);
       } catch (err) {
         if (active) setError(err.response?.data?.message || "Unable to load quiz history.");
@@ -50,15 +50,46 @@ export default function Dashboard() {
 
   const stats = useMemo(() => {
     const attempted = results.length;
-    const totalQuestions = results.reduce((sum, item) => sum + (item.totalQuestions || 0), 0);
-    const totalScore = results.reduce((sum, item) => sum + (item.score || 0), 0);
-    const accuracy = totalQuestions ? Math.round((totalScore / totalQuestions) * 100) : 0;
+
+    const totalQuestions = results.reduce(
+      (sum, item) => sum + (item.totalQuestions || 0),
+      0
+    );
+
+    // Live multiplayer uses correctAnswers.
+    // Solo practice uses score.
+    const totalCorrect = results.reduce(
+      (sum, item) =>
+        sum +
+        (item.correctAnswers !== undefined
+          ? item.correctAnswers
+          : item.score || 0),
+      0
+    );
+
+    const accuracy = totalQuestions
+      ? Math.round((totalCorrect / totalQuestions) * 100)
+      : 0;
+
     const best = results.reduce((bestScore, item) => {
-      const percentage = item.totalQuestions ? (item.score / item.totalQuestions) * 100 : 0;
+      const correct =
+        item.correctAnswers !== undefined
+          ? item.correctAnswers
+          : item.score || 0;
+
+      const percentage = item.totalQuestions
+        ? (correct / item.totalQuestions) * 100
+        : 0;
+
       return Math.max(bestScore, percentage);
     }, 0);
 
-    return { attempted, accuracy, best: Math.round(best), totalScore };
+    return {
+      attempted,
+      accuracy,
+      best: Math.round(best),
+      totalScore: totalCorrect,
+    };
   }, [results]);
 
   return (
@@ -106,7 +137,26 @@ export default function Dashboard() {
 
         <section className="rounded-2xl border border-white/10 bg-[#191b24] p-6 shadow-lg">
           <div className="mb-5 flex items-center justify-between"><h2 className="text-xl font-bold">Recent Quiz History</h2><span className="text-xs text-gray-500">LATEST 5</span></div>
-          {loading ? <p className="text-sm text-gray-400">Loading history...</p> : results.length === 0 ? <p className="text-sm text-gray-400">No quiz attempts yet. Start practicing to see your history.</p> : <div className="space-y-3">{results.slice(0, 5).map((item) => <div key={item._id} className="flex flex-col gap-2 rounded-xl bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-pink-100">{item.category || "General"}</p><p className="text-xs text-gray-400">{item.createdAt ? new Date(item.createdAt).toLocaleString() : "Date unavailable"}</p></div><p className="text-sm font-bold text-white">{item.score}/{item.totalQuestions}</p></div>)}</div>}
+          {loading ? <p className="text-sm text-gray-400">Loading history...</p> : results.length === 0 ? <p className="text-sm text-gray-400">No quiz attempts yet. Start practicing to see your history.</p> : <div className="space-y-3">{results.slice(0, 5).map((item) => <div key={item._id} className="flex flex-col gap-2 rounded-xl bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-pink-100">{item.category || "General"}</p><p className="text-xs text-gray-400">{item.createdAt ? new Date(item.createdAt).toLocaleString() : "Date unavailable"}</p></div>
+            <div className="text-right">
+              <p className="text-sm font-bold text-white">
+                {item.correctAnswers !== undefined
+                  ? `${item.correctAnswers}/${item.totalQuestions} correct`
+                  : `${item.score}/${item.totalQuestions} correct`}
+              </p>
+
+              {item.score !== undefined && (
+                <p className="mt-1 text-xs font-semibold text-pink-300">
+                  🏆 {item.score} pts
+                </p>
+              )}
+
+              {item.rank !== undefined && (
+                <p className="mt-1 text-xs font-semibold text-purple-300">
+                  🥇 Rank #{item.rank}
+                </p>
+              )}
+            </div></div>)}</div>}
         </section>
 
         <div className="mt-10 text-center text-xs text-gray-500">💡 Challenge your friends and climb the leaderboard.</div>
