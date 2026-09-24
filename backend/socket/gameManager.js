@@ -9,6 +9,8 @@ const LEADERBOARD_DISPLAY_MS = 5000;
 const GAME_CLEANUP_MS = 10 * 60 * 1000;
 
 
+
+
 // ================= LEADERBOARD =================
 
 function buildLeaderboard(game) {
@@ -17,12 +19,13 @@ function buildLeaderboard(game) {
       participantId: p.participantId,
       name: p.name,
       score: p.score,
+      correctCount: p.correctCount,
+      totalQuestions: game.questions.length,
       lastCorrect: p.lastCorrect,
       lastPoints: p.lastPoints,
     }))
     .sort((a, b) => b.score - a.score);
 }
-
 
 // ================= TIMER =================
 
@@ -143,6 +146,7 @@ async function finishQuiz(io, roomCode) {
         room: game.roomId,
         roomCode,
         participantName: p.name,
+        user: participant?.userId || undefined,
         score: p.score,
         correctAnswers: participant
           ? participant.correctCount
@@ -267,9 +271,26 @@ function registerSocketHandlers(io) {
         roomCode,
         participantName,
         participantId,
+        token,
       }) => {
-
         try {
+          // ================= GET LOGGED-IN USER ID =================
+
+          let userId = null;
+
+          if (token) {
+            try {
+              const decoded = jwt.verify(
+                token,
+                process.env.JWT_SECRET
+              );
+
+              userId = decoded.id;
+            } catch (err) {
+              console.log("Participant token invalid or expired");
+              userId = null;
+            }
+          }
 
           const code = (roomCode || "")
             .toUpperCase()
@@ -286,8 +307,9 @@ function registerSocketHandlers(io) {
 
           let game = games[code];
 
-          if (!game) {
+          // ================= LOAD ROOM =================
 
+          if (!game) {
             const room = await Room.findOne({
               roomCode: code,
             });
@@ -320,9 +342,7 @@ function registerSocketHandlers(io) {
             };
 
             games[code] = game;
-
           }
-
 
           // ================= STABLE PARTICIPANT ID =================
 
@@ -332,13 +352,16 @@ function registerSocketHandlers(io) {
           const existingParticipant =
             game.participants[stableParticipantId];
 
-
           // ================= RECONNECT EXISTING PLAYER =================
 
           if (existingParticipant) {
-
             existingParticipant.socketId = socket.id;
             existingParticipant.connected = true;
+
+            // Update user ID if logged-in user is available
+            if (userId) {
+              existingParticipant.userId = userId;
+            }
 
             socket.join(code);
 
@@ -368,40 +391,36 @@ function registerSocketHandlers(io) {
             return;
           }
 
-
           // ================= NEW PLAYER JOIN =================
 
           if (game.status !== "waiting") {
-
             return socket.emit(
               "error:message",
               "This quiz has already started"
             );
-
           }
 
           if (
             Object.keys(game.participants).length >=
             MAX_PARTICIPANTS
           ) {
-
             return socket.emit(
               "error:message",
               "Room is full (50/50 players)"
             );
-
           }
-
 
           // ================= CREATE PARTICIPANT =================
 
           game.participants[stableParticipantId] = {
-
             participantId: stableParticipantId,
 
             socketId: socket.id,
 
             name,
+
+            // Logged-in user's MongoDB ID
+            userId: userId || undefined,
 
             score: 0,
 
@@ -414,9 +433,7 @@ function registerSocketHandlers(io) {
             lastPoints: 0,
 
             connected: true,
-
           };
-
 
           socket.join(code);
 
@@ -425,46 +442,32 @@ function registerSocketHandlers(io) {
           socket.data.participantId =
             stableParticipantId;
 
-
           const participantNames = Object.values(
             game.participants
           ).map((p) => p.name);
 
-
           socket.emit("room:joined", {
-
             roomCode: code,
-
             hostName: game.hostName,
-
             participants: participantNames,
-
             totalQuestions:
               game.questions.length,
-
           });
-
 
           io.to(code).emit(
             "room:participantsUpdate",
             participantNames
           );
-
-
         } catch (err) {
-
           console.error(err);
 
           socket.emit(
             "error:message",
             "Could not join room"
           );
-
         }
-
       }
     );
-
 
 
     // ================= HOST START QUIZ =================
