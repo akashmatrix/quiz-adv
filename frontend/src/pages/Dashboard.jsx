@@ -1,675 +1,116 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
 import api from "../api/axios.js";
 
+const actions = [
+  { icon: "⚡", title: "Create Room", description: "Build a custom quiz and challenge your friends.", route: "/create-room", label: "Create Quiz", accent: "from-pink-500 to-purple-500" },
+  { icon: "🔑", title: "Join Room", description: "Enter a room code and join a live quiz battle.", route: "/join-room", label: "Join Battle", accent: "from-purple-500 to-indigo-500" },
+  { icon: "🎯", title: "Practice Solo", description: "Improve your knowledge with individual practice.", route: "/practice", label: "Start Practice", accent: "from-indigo-500 to-blue-500" },
+];
+
+function StatCard({ icon, label, value, detail }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-[#191b24] p-5 shadow-lg">
+      <div className="flex items-center justify-between">
+        <span className="text-2xl">{icon}</span>
+        <span className="text-xs uppercase tracking-wider text-gray-500">Stats</span>
+      </div>
+      <p className="mt-4 text-3xl font-extrabold text-white">{value}</p>
+      <p className="mt-1 text-sm font-semibold text-pink-200">{label}</p>
+      <p className="mt-1 text-xs text-gray-400">{detail}</p>
+    </div>
+  );
+}
+
 export default function Dashboard() {
+  const { user } = useAuth();
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const loadResults = async () => {
+    let active = true;
+
+    async function loadResults() {
       try {
         setLoading(true);
-        setError("");
-
-        const response = await api.get("/rooms/my-results");
-
-        setResults(
-          Array.isArray(response.data)
-            ? response.data
-            : []
-        );
+        const response = await api.get("/quiz/my-results");
+        if (active) setResults(Array.isArray(response.data) ? response.data : []);
       } catch (err) {
-        console.error(
-          "Dashboard results error:",
-          err
-        );
-
-        setError(
-          err.response?.data?.message ||
-          "Could not load your quiz results"
-        );
+        if (active) setError(err.response?.data?.message || "Unable to load quiz history.");
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
-    };
+    }
 
     loadResults();
+    return () => { active = false; };
   }, []);
 
-  // =========================================================
-  // BASIC COUNTS
-  // =========================================================
+  const stats = useMemo(() => {
+    const attempted = results.length;
+    const totalQuestions = results.reduce((sum, item) => sum + (item.totalQuestions || 0), 0);
+    const totalScore = results.reduce((sum, item) => sum + (item.score || 0), 0);
+    const accuracy = totalQuestions ? Math.round((totalScore / totalQuestions) * 100) : 0;
+    const best = results.reduce((bestScore, item) => {
+      const percentage = item.totalQuestions ? (item.score / item.totalQuestions) * 100 : 0;
+      return Math.max(bestScore, percentage);
+    }, 0);
 
-  const attempted = results.length;
-
-  const liveQuizCount = results.filter(
-    (item) => item.type === "live"
-  ).length;
-
-  const soloQuizCount = results.filter(
-    (item) => item.type === "solo"
-  ).length;
-
-  // =========================================================
-  // TOTAL QUESTIONS
-  // =========================================================
-
-  const totalQuestions = results.reduce(
-    (sum, item) =>
-      sum +
-      Number(
-        item.questionsAnswered ??
-        item.totalQuestions ??
-        0
-      ),
-    0
-  );
-
-  // =========================================================
-  // TOTAL CORRECT
-  // =========================================================
-
-  const totalCorrect = results.reduce(
-    (sum, item) =>
-      sum +
-      Number(item.correctAnswers ?? 0),
-    0
-  );
-
-  // =========================================================
-  // OVERALL ACCURACY
-  // =========================================================
-
-  const accuracy =
-    totalQuestions > 0
-      ? Math.min(
-        100,
-        Math.round(
-          (totalCorrect / totalQuestions) * 100
-        )
-      )
-      : 0;
-
-  // =========================================================
-  // BEST ACCURACY
-  // =========================================================
-
-  const bestAccuracy = results.reduce(
-    (best, item) => {
-      const correct = Number(
-        item.correctAnswers ?? 0
-      );
-
-      const total = Number(
-        item.questionsAnswered ??
-        item.totalQuestions ??
-        0
-      );
-
-      if (total <= 0) {
-        return best;
-      }
-
-      const percentage =
-        (correct / total) * 100;
-
-      return Math.max(
-        best,
-        Math.min(100, percentage)
-      );
-    },
-    0
-  );
-
-  // =========================================================
-  // BEST LIVE SCORE
-  // =========================================================
-
-  const liveResults = results.filter(
-    (item) => item.type === "live"
-  );
-
-  const bestLiveScore =
-    liveResults.length > 0
-      ? Math.max(
-        ...liveResults.map((item) =>
-          Number(item.score || 0)
-        )
-      )
-      : 0;
-
-  // =========================================================
-  // BEST SOLO ACCURACY
-  // =========================================================
-
-  const soloResults = results.filter(
-    (item) => item.type === "solo"
-  );
-
-  const bestSoloAccuracy =
-    soloResults.length > 0
-      ? Math.max(
-        ...soloResults.map((item) => {
-          const correct = Number(
-            item.correctAnswers ?? 0
-          );
-
-          const total = Number(
-            item.questionsAnswered ??
-            item.totalQuestions ??
-            0
-          );
-
-          return total > 0
-            ? (correct / total) * 100
-            : 0;
-        })
-      )
-      : 0;
-
-  // =========================================================
-  // LOADING
-  // =========================================================
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#080014] text-white">
-        <div className="text-center">
-
-          <div className="text-5xl mb-4 animate-bounce">
-            🧠
-          </div>
-
-          <h2 className="text-2xl font-bold">
-            Loading Dashboard...
-          </h2>
-
-          <p className="text-gray-400 mt-2">
-            Fetching your quiz statistics
-          </p>
-
-        </div>
-      </div>
-    );
-  }
-
-  // =========================================================
-  // DASHBOARD
-  // =========================================================
+    return { attempted, accuracy, best: Math.round(best), totalScore };
+  }, [results]);
 
   return (
-    <div className="min-h-screen bg-[#080014] text-white px-4 py-8">
+    <main className="relative min-h-[calc(100vh-80px)] overflow-hidden bg-[#11131c] px-4 py-8 text-[#e1e1ef] sm:px-8 lg:px-12">
+      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 animate-pulse rounded-full bg-pink-600/20 blur-[120px]" />
+      <div className="pointer-events-none absolute -bottom-40 -right-32 h-[30rem] w-[30rem] animate-pulse rounded-full bg-purple-700/20 blur-[130px]" />
 
-      {/* Background Glow */}
-      <div className="fixed top-10 left-10 w-72 h-72 bg-pink-600/10 rounded-full blur-[120px] pointer-events-none" />
-
-      <div className="fixed bottom-10 right-10 w-72 h-72 bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
-
-      <div className="relative max-w-6xl mx-auto">
-
-        {/* =================================================
-            HEADER
-        ================================================= */}
-
-        <div className="mb-8">
-
-          <p className="text-sm text-pink-400 font-semibold uppercase tracking-wider">
-            QuizNeon
-          </p>
-
-          <h1 className="text-3xl md:text-4xl font-extrabold mt-2">
-            Your Dashboard
-          </h1>
-
-          <p className="text-gray-400 mt-2">
-            Track your quiz performance and progress.
-          </p>
-
-        </div>
-
-        {/* =================================================
-            ERROR
-        ================================================= */}
-
-        {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20">
-            <p className="text-red-300">
-              {error}
-            </p>
+      <div className="relative z-10 mx-auto max-w-7xl">
+        <header className="mb-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="mb-3 text-xs font-bold uppercase tracking-[0.25em] text-pink-300">⚡ QuizNeon Arena</p>
+            <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl">
+              Welcome back, <span className="bg-gradient-to-r from-pink-300 via-pink-400 to-purple-400 bg-clip-text text-transparent">{user?.name || "Player"}</span>!
+            </h1>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-[#debec8] sm:text-base">Track your progress, practice your skills, and climb the leaderboard.</p>
           </div>
-        )}
+          <Link to="/leaderboard" className="w-fit rounded-full border border-pink-400/30 bg-pink-500/10 px-5 py-3 text-sm font-semibold text-pink-200 transition hover:bg-pink-500/20">🏆 Leaderboard →</Link>
+        </header>
 
-        {/* =================================================
-            STAT CARDS
-        ================================================= */}
+        <section className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard icon="📝" label="Quizzes Attempted" value={loading ? "—" : stats.attempted} detail="Completed quizzes" />
+          <StatCard icon="🎯" label="Overall Accuracy" value={loading ? "—" : `${stats.accuracy}%`} detail="Correct answers" />
+          <StatCard icon="🏆" label="Best Performance" value={loading ? "—" : `${stats.best}%`} detail="Highest quiz percentage" />
+          <StatCard icon="✅" label="Correct Answers" value={loading ? "—" : stats.totalScore} detail="Across your attempts" />
+        </section>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {error && <div className="mb-6 rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}
 
-          {/* Attempts */}
+        <section className="mb-10 rounded-[2rem] border border-white/10 bg-gradient-to-br from-[#282333] via-[#1d1f2b] to-[#151724] p-6 shadow-2xl sm:p-10">
+          <span className="inline-flex rounded-full bg-purple-500/20 px-3 py-1.5 text-xs font-semibold text-purple-200">YOUR QUIZ HUB</span>
+          <h2 className="mt-4 text-3xl font-extrabold leading-tight sm:text-4xl">Test your knowledge.<br /><span className="bg-gradient-to-r from-pink-300 to-purple-300 bg-clip-text text-transparent">Beat the clock.</span></h2>
+          <p className="mt-4 max-w-md text-sm leading-6 text-gray-400">Challenge your friends in real-time quizzes or practice at your own pace.</p>
+        </section>
 
-          <div className="p-5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl">
-
-            <p className="text-sm text-gray-400">
-              Quizzes Attempted
-            </p>
-
-            <p className="text-3xl font-extrabold mt-2">
-              {attempted}
-            </p>
-
-            <p className="text-xs text-gray-500 mt-2">
-              Solo: {soloQuizCount} • Live: {liveQuizCount}
-            </p>
-
+        <section className="mb-10">
+          <div className="mb-5 flex items-center justify-between"><h2 className="text-xl font-bold sm:text-2xl">Choose your battle</h2><span className="text-xs uppercase tracking-wider text-gray-500">3 MODES</span></div>
+          <div className="grid gap-5 md:grid-cols-3">
+            {actions.map((action) => <Link key={action.title} to={action.route} className="group relative overflow-hidden rounded-2xl border border-white/10 bg-[#191b24] p-6 shadow-lg transition-all duration-300 hover:-translate-y-2 hover:border-pink-400/40">
+              <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${action.accent} text-3xl shadow-lg transition-transform duration-300 group-hover:scale-110`}>{action.icon}</div>
+              <h3 className="text-xl font-bold">{action.title}</h3><p className="mt-3 min-h-[48px] text-sm leading-6 text-gray-400">{action.description}</p>
+              <div className="mt-6 flex items-center justify-between"><span className="text-sm font-semibold text-pink-300">{action.label}</span><span className="text-lg">→</span></div>
+            </Link>)}
           </div>
+        </section>
 
-          {/* Questions */}
+        <section className="rounded-2xl border border-white/10 bg-[#191b24] p-6 shadow-lg">
+          <div className="mb-5 flex items-center justify-between"><h2 className="text-xl font-bold">Recent Quiz History</h2><span className="text-xs text-gray-500">LATEST 5</span></div>
+          {loading ? <p className="text-sm text-gray-400">Loading history...</p> : results.length === 0 ? <p className="text-sm text-gray-400">No quiz attempts yet. Start practicing to see your history.</p> : <div className="space-y-3">{results.slice(0, 5).map((item) => <div key={item._id} className="flex flex-col gap-2 rounded-xl bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-pink-100">{item.category || "General"}</p><p className="text-xs text-gray-400">{item.createdAt ? new Date(item.createdAt).toLocaleString() : "Date unavailable"}</p></div><p className="text-sm font-bold text-white">{item.score}/{item.totalQuestions}</p></div>)}</div>}
+        </section>
 
-          <div className="p-5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl">
-
-            <p className="text-sm text-gray-400">
-              Questions Answered
-            </p>
-
-            <p className="text-3xl font-extrabold mt-2">
-              {totalQuestions}
-            </p>
-
-            <p className="text-xs text-gray-500 mt-2">
-              Across completed quizzes
-            </p>
-
-          </div>
-
-          {/* Correct */}
-
-          <div className="p-5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl">
-
-            <p className="text-sm text-gray-400">
-              Correct Answers
-            </p>
-
-            <p className="text-3xl font-extrabold mt-2 text-green-400">
-              {totalCorrect}
-            </p>
-
-            <p className="text-xs text-gray-500 mt-2">
-              Total correct responses
-            </p>
-
-          </div>
-
-          {/* Accuracy */}
-
-          <div className="p-5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl">
-
-            <p className="text-sm text-gray-400">
-              Overall Accuracy
-            </p>
-
-            <p className="text-3xl font-extrabold mt-2 text-pink-400">
-              {accuracy}%
-            </p>
-
-            <p className="text-xs text-gray-500 mt-2">
-              Across all completed quizzes
-            </p>
-
-          </div>
-
-        </div>
-
-        {/* =================================================
-            PERFORMANCE
-        ================================================= */}
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-
-          {/* Overall Accuracy */}
-
-          <div className="p-6 rounded-2xl bg-gradient-to-br from-pink-500/10 to-purple-500/10 border border-pink-500/20">
-
-            <p className="text-sm text-gray-400">
-              Overall Accuracy
-            </p>
-
-            <div className="flex items-end gap-2 mt-3">
-
-              <span className="text-5xl font-extrabold">
-                {accuracy}
-              </span>
-
-              <span className="text-gray-400 mb-2">
-                %
-              </span>
-
-            </div>
-
-            <div className="mt-5 w-full h-3 rounded-full bg-white/10 overflow-hidden">
-
-              <div
-                className="h-full bg-gradient-to-r from-pink-500 to-purple-600 transition-all duration-700"
-                style={{
-                  width: `${accuracy}%`,
-                }}
-              />
-
-            </div>
-
-          </div>
-
-          {/* Best Accuracy */}
-
-          <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
-
-            <p className="text-sm text-gray-400">
-              Best Accuracy
-            </p>
-
-            <p className="text-5xl font-extrabold mt-3 text-purple-400">
-              {Math.round(bestAccuracy)}%
-            </p>
-
-            <p className="text-sm text-gray-500 mt-3">
-              Highest accuracy in any completed quiz
-            </p>
-
-          </div>
-
-          {/* Best Live Score */}
-
-          <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
-
-            <p className="text-sm text-gray-400">
-              Best Live Score
-            </p>
-
-            <p className="text-5xl font-extrabold mt-3 text-pink-400">
-              {bestLiveScore}
-            </p>
-
-            <p className="text-sm text-gray-500 mt-3">
-              Highest points earned in a live quiz
-            </p>
-
-          </div>
-
-        </div>
-
-        {/* =================================================
-            QUIZ TYPE SUMMARY
-        ================================================= */}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-
-          {/* Solo */}
-
-          <div className="p-6 rounded-2xl border border-pink-500/20 bg-pink-500/5">
-
-            <div className="flex items-center justify-between">
-
-              <div>
-                <p className="text-sm text-gray-400">
-                  Solo Practice
-                </p>
-
-                <p className="text-3xl font-extrabold mt-2">
-                  {soloQuizCount}
-                </p>
-
-                <p className="text-xs text-gray-500 mt-1">
-                  quizzes completed
-                </p>
-              </div>
-
-              <div className="text-4xl">
-                📝
-              </div>
-
-            </div>
-
-            <div className="mt-5">
-
-              <p className="text-xs text-gray-500">
-                Best Accuracy
-              </p>
-
-              <p className="text-xl font-bold text-pink-400 mt-1">
-                {Math.round(bestSoloAccuracy)}%
-              </p>
-
-            </div>
-
-          </div>
-
-          {/* Live */}
-
-          <div className="p-6 rounded-2xl border border-purple-500/20 bg-purple-500/5">
-
-            <div className="flex items-center justify-between">
-
-              <div>
-                <p className="text-sm text-gray-400">
-                  Live Multiplayer
-                </p>
-
-                <p className="text-3xl font-extrabold mt-2">
-                  {liveQuizCount}
-                </p>
-
-                <p className="text-xs text-gray-500 mt-1">
-                  quizzes completed
-                </p>
-              </div>
-
-              <div className="text-4xl">
-                🎮
-              </div>
-
-            </div>
-
-            <div className="mt-5">
-
-              <p className="text-xs text-gray-500">
-                Best Score
-              </p>
-
-              <p className="text-xl font-bold text-purple-400 mt-1">
-                {bestLiveScore} pts
-              </p>
-
-            </div>
-
-          </div>
-
-        </div>
-
-        {/* =================================================
-            RECENT RESULTS
-        ================================================= */}
-
-        <div className="rounded-2xl bg-white/5 border border-white/10 overflow-hidden">
-
-          <div className="p-6 border-b border-white/10">
-
-            <h2 className="text-xl font-bold">
-              Recent Quiz Results
-            </h2>
-
-            <p className="text-sm text-gray-400 mt-1">
-              Your latest completed quizzes
-            </p>
-
-          </div>
-
-          {results.length === 0 ? (
-            <div className="p-10 text-center">
-
-              <div className="text-5xl mb-4">
-                🎯
-              </div>
-
-              <h3 className="text-xl font-bold">
-                No quiz results yet
-              </h3>
-
-              <p className="text-gray-400 mt-2">
-                Complete a quiz to see your performance here.
-              </p>
-
-            </div>
-          ) : (
-            <div className="divide-y divide-white/10">
-
-              {results
-                .slice(0, 10)
-                .map((item, index) => {
-
-                  const correct = Number(
-                    item.correctAnswers ?? 0
-                  );
-
-                  const total = Number(
-                    item.questionsAnswered ??
-                    item.totalQuestions ??
-                    0
-                  );
-
-                  const percentage =
-                    total > 0
-                      ? Math.round(
-                        (correct / total) * 100
-                      )
-                      : 0;
-
-                  const isLive =
-                    item.type === "live";
-
-                  const title = isLive
-                    ? `Live Quiz • ${item.roomCode || "Room"
-                    }`
-                    : item.category ||
-                    "Practice Quiz";
-
-                  return (
-                    <div
-                      key={
-                        item._id ||
-                        item.id ||
-                        index
-                      }
-                      className="p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 hover:bg-white/5 transition"
-                    >
-
-                      {/* Quiz Info */}
-
-                      <div className="min-w-0">
-
-                        <div className="flex items-center gap-2 flex-wrap">
-
-                          <p className="font-bold">
-                            {title}
-                          </p>
-
-                          <span
-                            className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${isLive
-                                ? "bg-purple-500/15 text-purple-300 border border-purple-500/20"
-                                : "bg-pink-500/15 text-pink-300 border border-pink-500/20"
-                              }`}
-                          >
-                            {isLive
-                              ? "Live"
-                              : "Solo"}
-                          </span>
-
-                        </div>
-
-                        <p className="text-sm text-gray-500 mt-1">
-                          {item.createdAt
-                            ? new Date(
-                              item.createdAt
-                            ).toLocaleString()
-                            : "Recently completed"}
-                        </p>
-
-                      </div>
-
-                      {/* Stats */}
-
-                      <div className="flex flex-wrap items-center gap-5">
-
-                        {/* Correct */}
-
-                        <div>
-                          <p className="text-xs text-gray-500">
-                            Correct
-                          </p>
-
-                          <p className="font-bold">
-                            {correct}/{total}
-                          </p>
-                        </div>
-
-                        {/* Accuracy */}
-
-                        <div>
-                          <p className="text-xs text-gray-500">
-                            Accuracy
-                          </p>
-
-                          <p className="font-bold text-green-400">
-                            {percentage}%
-                          </p>
-                        </div>
-
-                        {/* Score */}
-
-                        <div>
-                          <p className="text-xs text-gray-500">
-                            {isLive
-                              ? "Score"
-                              : "Result"}
-                          </p>
-
-                          <p className="font-bold text-pink-400">
-
-                            {isLive
-                              ? `${Number(
-                                item.score || 0
-                              )} pts`
-                              : `${correct}/${total}`}
-
-                          </p>
-                        </div>
-
-                        {/* Rank */}
-
-                        <div>
-                          <p className="text-xs text-gray-500">
-                            Rank
-                          </p>
-
-                          <p className="font-bold text-purple-400">
-                            {isLive &&
-                              item.rank
-                              ? `#${item.rank}`
-                              : "—"}
-                          </p>
-                        </div>
-
-                      </div>
-
-                    </div>
-                  );
-                })}
-
-            </div>
-          )}
-
-        </div>
-
+        <div className="mt-10 text-center text-xs text-gray-500">💡 Challenge your friends and climb the leaderboard.</div>
       </div>
-    </div>
+    </main>
   );
 }
