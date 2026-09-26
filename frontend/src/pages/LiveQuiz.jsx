@@ -521,6 +521,10 @@ export default function LiveQuiz() {
             {question.questionText}
           </h2>
 
+          {question.imageUrl && (
+            <img src={question.imageUrl} alt="Question visual" className="mt-5 max-h-80 w-full rounded-2xl border border-white/10 object-contain bg-black/20" />
+          )}
+
         </div>
 
         {/* Host View */}

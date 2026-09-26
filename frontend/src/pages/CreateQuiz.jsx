@@ -2,12 +2,16 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/axios.js";
 import socket from "../socket.js";
+import QuestionImageControls from "../components/QuestionImageControls.jsx";
 
 const makeQuestion = (timeLimit = 20) => ({
   questionText: "",
   options: ["", "", "", ""],
   correctAnswerIndex: 0,
   explanation: "",
+  imageUrl: "",
+  imageSource: "",
+  imagePrompt: "",
   timeLimit,
 });
 
@@ -190,7 +194,7 @@ export default function CreateQuiz() {
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <Link to="/my-quizzes" className="text-sm text-pink-300 hover:text-pink-200">← My Quizzes</Link>
-            <h1 className="mt-3 text-3xl font-extrabold sm:text-4xl">{editId ? "Edit Quiz" : quiz.creationMethod === "ai" ? "Review AI Quiz" : "Create Manual Quiz"}</h1>
+            <h1 className="mt-3 text-3xl font-extrabold sm:text-4xl">{editId ? "Edit Quiz" : quiz.creationMethod === "ai" ? "Review AI Quiz" : (quiz.creationMethod === "pdf" || quiz.creationMethod === "ppt" ? "Review Document Quiz" : "Create Manual Quiz")}</h1>
             <p className="mt-2 text-sm text-gray-400">Build it now, save it, and host it later.</p>
           </div>
           <span className="rounded-full border border-pink-400/20 bg-pink-500/10 px-4 py-2 text-sm text-pink-200">{questionCount} questions</span>
@@ -218,6 +222,7 @@ export default function CreateQuiz() {
                 <div className="flex flex-wrap gap-2 text-xs"><button type="button" onClick={() => moveQuestion(qIndex, -1)} disabled={qIndex === 0} className="rounded-lg border border-white/10 px-3 py-2 disabled:opacity-30">↑</button><button type="button" onClick={() => moveQuestion(qIndex, 1)} disabled={qIndex === quiz.questions.length - 1} className="rounded-lg border border-white/10 px-3 py-2 disabled:opacity-30">↓</button><button type="button" onClick={() => duplicateQuestion(qIndex)} className="rounded-lg border border-purple-400/20 px-3 py-2 text-purple-200">Duplicate</button><button type="button" onClick={() => removeQuestion(qIndex)} disabled={quiz.questions.length === 1} className="rounded-lg border border-red-400/20 px-3 py-2 text-red-300 disabled:opacity-30">Delete</button></div>
               </div>
               <textarea rows="3" value={q.questionText} onChange={(e) => updateQuestion(qIndex, "questionText", e.target.value)} placeholder="Enter question text..." className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-pink-500" />
+              <QuestionImageControls question={q} context={`${quiz.topic || "General"} ${quiz.title || "Quiz"}`} onChange={(changes) => setQuiz((current) => { const questions = [...current.questions]; questions[qIndex] = { ...questions[qIndex], ...changes }; return { ...current, questions }; })} />
               <div className="mt-5 grid gap-3 md:grid-cols-2">
                 {q.options.map((option, optionIndex) => <div key={optionIndex} className={`flex items-center gap-3 rounded-xl border p-3 ${q.correctAnswerIndex === optionIndex ? "border-pink-500/50 bg-pink-500/10" : "border-white/10 bg-white/[0.03]"}`}><input type="radio" name={`correct-${qIndex}`} checked={q.correctAnswerIndex === optionIndex} onChange={() => updateQuestion(qIndex, "correctAnswerIndex", optionIndex)} className="accent-pink-500" /><b className="text-xs text-gray-500">{String.fromCharCode(65 + optionIndex)}</b><input value={option} onChange={(e) => updateOption(qIndex, optionIndex, e.target.value)} placeholder={`Option ${String.fromCharCode(65 + optionIndex)}`} className="w-full bg-transparent outline-none" /></div>)}
               </div>

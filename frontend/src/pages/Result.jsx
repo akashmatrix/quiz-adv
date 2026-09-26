@@ -120,6 +120,10 @@ export default function Result() {
                   </span>
                 </div>
 
+                {b.imageUrl && (
+                  <img src={b.imageUrl} alt="Question visual" className="mb-4 max-h-64 w-full rounded-xl border border-white/10 object-contain bg-black/20" />
+                )}
+
                 {/* Answer Info */}
                 <div className="text-sm space-y-2">
                   <p className="text-gray-300">

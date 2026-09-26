@@ -25,7 +25,6 @@ const methods = [
     to: "/create-quiz/document",
     button: "Open Document Quiz",
     className: "from-indigo-500 to-blue-600",
-    comingSoon: true,
   },
 ];
 
@@ -49,19 +48,12 @@ export default function CreateQuizHome() {
               </div>
               <div className="mt-5 flex items-center gap-2">
                 <h2 className="text-xl font-bold">{method.title}</h2>
-                {method.comingSoon && <span className="rounded-full bg-yellow-500/10 px-2 py-1 text-[10px] font-bold uppercase text-yellow-300">Next</span>}
               </div>
               <p className="mt-3 min-h-20 text-sm leading-6 text-gray-400">{method.text}</p>
 
-              {method.comingSoon ? (
-                <Link to={method.to} className="mt-6 block w-full rounded-xl border border-white/10 px-4 py-3 text-center text-sm font-bold text-gray-300 hover:bg-white/5">
-                  {method.button} →
-                </Link>
-              ) : (
-                <Link to={method.to} className={`mt-6 block w-full rounded-xl bg-gradient-to-r ${method.className} px-4 py-3 text-center text-sm font-bold shadow-lg`}>
-                  {method.button} →
-                </Link>
-              )}
+              <Link to={method.to} className={`mt-6 block w-full rounded-xl bg-gradient-to-r ${method.className} px-4 py-3 text-center text-sm font-bold shadow-lg`}>
+                {method.button} →
+              </Link>
             </div>
           ))}
         </div>

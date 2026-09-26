@@ -52,6 +52,7 @@ export default function CustomQuiz() {
         category: quiz.topic || "General",
         answers: quiz.questions.map((q, index) => ({
           questionText: q.questionText,
+          imageUrl: q.imageUrl || "",
           options: q.options,
           correctAnswerIndex: q.correctAnswerIndex,
           selectedIndex: answers[index] ?? -1,
@@ -84,6 +85,7 @@ export default function CustomQuiz() {
         <section className="rounded-3xl border border-white/10 bg-[#191b26] p-6 shadow-2xl sm:p-8">
           <p className="text-sm text-gray-500">Question {current + 1} of {quiz.questions.length}</p>
           <h2 className="mt-3 text-xl font-bold leading-relaxed sm:text-2xl">{question.questionText}</h2>
+          {question.imageUrl && <img src={question.imageUrl} alt="Question visual" className="mt-5 max-h-80 w-full rounded-2xl border border-white/10 object-contain bg-black/20" />}
           <div className="mt-7 grid gap-3">
             {question.options.map((option, index) => (
               <button key={index} onClick={() => choose(index)} className={`flex items-center gap-4 rounded-2xl border p-4 text-left transition ${selected === index ? "border-pink-500 bg-pink-500/10" : "border-white/10 bg-white/[0.03] hover:border-pink-400/40"}`}>

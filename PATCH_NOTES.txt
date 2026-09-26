@@ -1,36 +1,21 @@
-QuizNeon Create Quiz Flow Patch
-================================
-Base: quiz-adv(4).zip
+AI IMAGE PROVIDER UPDATE
 
-Changed files:
-- frontend/src/App.jsx
-- frontend/src/pages/Dashboard.jsx
-- frontend/src/pages/CreateQuiz.jsx
-- frontend/src/pages/CreateQuizHome.jsx (new)
-- frontend/src/pages/CustomQuiz.jsx (new)
-- frontend/src/pages/DocumentQuiz.jsx (new)
-- frontend/src/pages/AIQuiz.jsx
-- frontend/src/pages/MyQuizzes.jsx
-- backend/routes/quizzes.js
+- Removed Gemini image generation from backend/routes/images.js.
+- Kept Gemini text quiz generation unchanged.
+- Added Hugging Face Inference Providers text-to-image generation.
+- Uses Node built-in fetch; no new npm dependency is required.
+- Added HF_TOKEN, HF_IMAGE_PROVIDER, and HF_IMAGE_MODEL to backend/.env.example.
+- Existing manual image upload and MongoDB GridFS storage remain unchanged.
+- Existing /api/images/generate endpoint remains unchanged, so frontend integration does not need to change.
+- Added IMAGE_PROVIDER_SETUP.md with setup/testing instructions.
 
-Implemented:
-- Dashboard has one main Create Quiz entry.
-- Create Quiz hub: Manual / AI / PDF-PPT.
-- Manual and AI use the same review/edit editor.
-- Save is optional.
-- Direct Start Solo without saving.
-- Direct Host without saving.
-- Saved quiz editing now opens the manual editor.
-- AI generation navigates into the manual editor.
-- Added backend host-draft and submit-draft endpoints.
-- PDF/PPT screen is prepared but document extraction is not implemented in this patch.
 
-Validation:
-- backend/routes/quizzes.js passed node --check.
-- Frontend build could not be verified because Vite dependencies were not fully installed in the execution environment.
-
-DEFAULT TIMER UPDATE
-- Added Quiz-level Default Time per Question selector (2-120 seconds) to CreateQuiz.
-- New questions inherit the selected default timer.
-- Changing the default applies it to all current questions.
-- Individual question timers remain editable.
+IMAGE PROMPT WORKFLOW UPGRADE
+- Preserved manual image upload and GridFS storage.
+- Replaced direct question-to-image generation with a two-step AI workflow.
+- Added POST /api/images/prompt to create a focused visual prompt using the existing Gemini text model.
+- Added AI Image — Best for Question UI with prompt preview/edit/regenerate.
+- Added Custom AI Image UI where the user can write/edit a prompt.
+- Existing POST /api/images/generate now accepts an optional custom prompt and continues using Hugging Face for image generation.
+- Added imagePrompt to Quiz question schema so generated prompts can be preserved with saved quizzes.
+- Existing image URL/GridFS, upload, quiz save, host, solo/live image display flows are preserved.

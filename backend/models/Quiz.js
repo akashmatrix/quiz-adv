@@ -13,6 +13,8 @@ const QuizQuestionSchema = new mongoose.Schema(
     },
     correctAnswerIndex: { type: Number, required: true, min: 0, max: 3 },
     explanation: { type: String, default: "", trim: true },
+    imageUrl: { type: String, default: "", trim: true },
+    imagePrompt: { type: String, default: "", trim: true, maxlength: 5000 },
     timeLimit: { type: Number, required: true, min: 2, max: 120, default: 20 },
   },
   { _id: true }

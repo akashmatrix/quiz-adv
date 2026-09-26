@@ -12,6 +12,7 @@ const RoomQuestionSchema = new mongoose.Schema(
       required: true,
     },
     correctAnswerIndex: { type: Number, required: true, min: 0, max: 3 },
+    imageUrl: { type: String, default: "", trim: true },
     // Host decides timer for each question - between 2 and 120 seconds
     timeLimit: { type: Number, required: true, min: 2, max: 120, default: 20 },
   },

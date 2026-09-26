@@ -2,7 +2,10 @@ const express = require("express");
 const Quiz = require("../models/Quiz");
 const Room = require("../models/Room");
 const authMiddleware = require("../middleware/auth");
-const { GoogleGenAI } = require("@google/genai");
+const { GoogleGenAI, createUserContent, createPartFromUri } = require("@google/genai");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
 
 const router = express.Router();
 
@@ -39,6 +42,8 @@ function normalizeQuestions(input) {
       options,
       correctAnswerIndex,
       explanation: String(q.explanation || "").trim(),
+      imageUrl: String(q.imageUrl || "").trim(),
+      imagePrompt: String(q.imagePrompt || "").trim().slice(0, 5000),
       timeLimit,
     };
   });
@@ -212,6 +217,7 @@ Rules:
         options,
         correctAnswerIndex,
         explanation,
+        imageUrl: "",
         timeLimit: timer,
       };
     });
@@ -236,6 +242,166 @@ Rules:
 });
 
 
+
+// Generate a quiz from an uploaded PDF/PPT/PPTX document.
+// The file is used only as AI input; the generated quiz is NOT auto-saved.
+router.post("/document/generate", authMiddleware, async (req, res) => {
+  let tempPath = "";
+  let uploadedFileName = "";
+
+  try {
+    const { fileName, mimeType, fileData, questionCount, difficulty, timePerQuestion, instructions } = req.body;
+    const cleanFileName = String(fileName || "").trim();
+    const cleanMimeType = String(mimeType || "").trim().toLowerCase();
+    const count = Number(questionCount);
+    const cleanDifficulty = String(difficulty || "medium").toLowerCase();
+    const timer = Number(timePerQuestion);
+
+    const allowedTypes = new Set([
+      "application/pdf",
+      "application/vnd.ms-powerpoint",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ]);
+    const extension = path.extname(cleanFileName).toLowerCase();
+    const allowedExtensions = new Set([".pdf", ".ppt", ".pptx"]);
+
+    if (!cleanFileName || !allowedExtensions.has(extension) || !allowedTypes.has(cleanMimeType)) {
+      return res.status(400).json({ message: "Only PDF, PPT, and PPTX files are supported." });
+    }
+    if (!fileData || typeof fileData !== "string") {
+      return res.status(400).json({ message: "Document file data is required." });
+    }
+    if (!Number.isInteger(count) || count < 1 || count > 50) {
+      return res.status(400).json({ message: "Question count must be between 1 and 50." });
+    }
+    if (!VALID_DIFFICULTIES.includes(cleanDifficulty)) {
+      return res.status(400).json({ message: "Invalid difficulty." });
+    }
+    if (!Number.isInteger(timer) || timer < 2 || timer > 120) {
+      return res.status(400).json({ message: "Time per question must be between 2 and 120 seconds." });
+    }
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ message: "AI service is not configured on the server." });
+    }
+
+    const rawBase64 = fileData.replace(/^data:[^;]+;base64,/, "");
+    const bytes = Buffer.from(rawBase64, "base64");
+    if (!bytes.length) return res.status(400).json({ message: "The uploaded document is empty." });
+    if (bytes.length > 10 * 1024 * 1024) {
+      return res.status(400).json({ message: "Document size must be 10 MB or less." });
+    }
+
+    tempPath = path.join(os.tmpdir(), `quiz-document-${Date.now()}-${Math.random().toString(36).slice(2)}${extension}`);
+    fs.writeFileSync(tempPath, bytes);
+
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
+    const uploaded = await ai.files.upload({
+      file: tempPath,
+      config: { mimeType: cleanMimeType, displayName: cleanFileName },
+    });
+    uploadedFileName = uploaded.name;
+
+    const prompt = `You are an exam-quiz generator. Read the uploaded document carefully and create exactly ${count} multiple-choice questions from the DOCUMENT CONTENT ONLY.
+
+Difficulty: ${cleanDifficulty}.
+Time per question: ${timer} seconds.
+Additional instructions: ${String(instructions || "").trim() || "None"}.
+
+STRICT RULES:
+1. Generate exactly ${count} distinct questions. Never return fewer than ${count}.
+2. Questions must test actual facts, concepts, definitions, examples, processes, comparisons, or details explicitly present in the document.
+3. Do NOT use generic wording such as "According to the document...", "Based on the document...", "What does the document say...", or "What is mentioned in the document...". Ask the question directly as a normal exam question.
+4. Do not invent facts that are not supported by the document.
+5. Do not repeat questions or options.
+6. Each question must have exactly 4 plausible options and exactly one correct answer.
+7. Keep questions clear and natural for a college/student quiz.
+8. Use the terminology used in the document where appropriate.
+9. Explanations must briefly explain the correct answer using the document's content.
+10. Return ONLY the requested JSON object. No markdown, commentary, or extra text.`;
+
+    const response = await ai.models.generateContent({
+      model,
+      contents: createUserContent([
+        createPartFromUri(uploaded.uri, uploaded.mimeType || cleanMimeType),
+        prompt,
+      ]),
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            description: { type: "string" },
+            topic: { type: "string" },
+            questions: {
+              type: "array",
+              minItems: count,
+              maxItems: count,
+              items: {
+                type: "object",
+                properties: {
+                  questionText: { type: "string" },
+                  options: { type: "array", minItems: 4, maxItems: 4, items: { type: "string" } },
+                  correctAnswerIndex: { type: "integer", minimum: 0, maximum: 3 },
+                  explanation: { type: "string" },
+                },
+                required: ["questionText", "options", "correctAnswerIndex", "explanation"],
+              },
+            },
+          },
+          required: ["title", "description", "topic", "questions"],
+        },
+      },
+    });
+
+    let generated;
+    try { generated = JSON.parse(response.text); }
+    catch { return res.status(502).json({ message: "AI returned an invalid quiz format. Please try again." }); }
+
+    if (!generated || !Array.isArray(generated.questions) || generated.questions.length !== count) {
+      return res.status(502).json({ message: `AI generated ${generated?.questions?.length || 0} questions instead of ${count}. Please try again.` });
+    }
+
+    const questions = generated.questions.map((q, index) => {
+      const questionText = String(q?.questionText || "").trim();
+      const options = Array.isArray(q?.options) ? q.options.map((o) => String(o || "").trim()) : [];
+      const correctAnswerIndex = Number(q?.correctAnswerIndex);
+      const explanation = String(q?.explanation || "").trim();
+      if (!questionText || options.length !== 4 || options.some((o) => !o)) throw new Error(`Invalid generated question ${index + 1}`);
+      if (new Set(options.map((o) => o.toLowerCase())).size !== 4) throw new Error(`Generated question ${index + 1} has duplicate options`);
+      if (!Number.isInteger(correctAnswerIndex) || correctAnswerIndex < 0 || correctAnswerIndex > 3) throw new Error(`Invalid answer for question ${index + 1}`);
+      return { questionText, options, correctAnswerIndex, explanation, imageUrl: "", timeLimit: timer };
+    });
+
+    res.json({
+      title: String(generated.title || path.basename(cleanFileName, extension)).trim().slice(0, 150),
+      description: String(generated.description || `Quiz generated from ${cleanFileName}.`).trim().slice(0, 1000),
+      topic: String(generated.topic || path.basename(cleanFileName, extension)).trim().slice(0, 100),
+      difficulty: cleanDifficulty,
+      creationMethod: extension === ".pdf" ? "pdf" : "ppt",
+      status: "draft",
+      timePerQuestion: timer,
+      questions,
+    });
+  } catch (err) {
+    console.error("Document quiz generation error:", err.message);
+    res.status(502).json({ message: "Could not generate quiz from this document. Please try another file or try again." });
+  } finally {
+    if (uploadedFileName && process.env.GEMINI_API_KEY) {
+      try {
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        await ai.files.delete({ name: uploadedFileName });
+      } catch (cleanupError) {
+        console.warn("Gemini file cleanup failed:", cleanupError.message);
+      }
+    }
+    if (tempPath) {
+      try { fs.unlinkSync(tempPath); } catch {}
+    }
+  }
+});
+
 // HOST a quiz draft directly without saving it to the Quiz collection.
 router.post("/host-draft", authMiddleware, async (req, res) => {
   try {
@@ -258,6 +424,8 @@ router.post("/host-draft", authMiddleware, async (req, res) => {
         questionText: q.questionText,
         options: q.options,
         correctAnswerIndex: q.correctAnswerIndex,
+        imageUrl: q.imageUrl || "",
+        imagePrompt: q.imagePrompt || "",
         timeLimit: q.timeLimit,
       })),
     });
@@ -289,6 +457,7 @@ router.post("/submit-draft", authMiddleware, async (req, res) => {
         questionText: String(answer.questionText || ""),
         selectedIndex,
         correctAnswerIndex,
+        imageUrl: String(answer.imageUrl || ""),
         isCorrect,
       };
     });
@@ -415,6 +584,8 @@ router.post("/:id/host", authMiddleware, async (req, res) => {
         questionText: q.questionText,
         options: q.options,
         correctAnswerIndex: q.correctAnswerIndex,
+        imageUrl: q.imageUrl || "",
+        imagePrompt: q.imagePrompt || "",
         timeLimit: q.timeLimit,
       })),
     });
