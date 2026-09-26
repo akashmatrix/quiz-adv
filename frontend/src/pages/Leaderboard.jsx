@@ -7,16 +7,21 @@ export default function Leaderboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api
-      .get("/quiz/leaderboard")
-      .then((res) => setResults(res.data))
-      .catch((err) =>
+    const loadLeaderboard = async () => {
+      try {
+        const res = await api.get("/quiz/leaderboard");
+        setResults(Array.isArray(res.data) ? res.data : []);
+      } catch (err) {
         setError(
           err.response?.data?.message ||
           "Could not load leaderboard"
-        )
-      )
-      .finally(() => setLoading(false));
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadLeaderboard();
   }, []);
 
   return (
@@ -40,7 +45,7 @@ export default function Leaderboard() {
           </h2>
 
           <p className="text-sm text-gray-400 mt-2">
-            Check the top quiz performers
+            Top multiplayer quiz performers
           </p>
         </div>
 
@@ -72,7 +77,7 @@ export default function Leaderboard() {
             </div>
 
             <p className="text-gray-400">
-              No results yet. Be the first!
+              No multiplayer results yet.
             </p>
           </div>
         )}
@@ -80,63 +85,74 @@ export default function Leaderboard() {
         {/* Results */}
         {!loading && results.length > 0 && (
           <div className="space-y-3">
-            {results.map((r, idx) => (
-              <div
-                key={r._id}
-                className={`flex items-center justify-between gap-4 p-4 rounded-2xl border transition hover:scale-[1.01] ${idx === 0
-                    ? "bg-yellow-500/10 border-yellow-400/40"
-                    : idx === 1
-                      ? "bg-gray-400/10 border-gray-400/30"
-                      : idx === 2
-                        ? "bg-orange-500/10 border-orange-400/30"
-                        : "bg-white/5 border-white/10"
-                  }`}
-              >
+            {results.map((r, idx) => {
+              const rank = r.rank || idx + 1;
 
-                {/* Rank + User */}
-                <div className="flex items-center gap-3 min-w-0">
+              const playerName =
+                r.participantName ||
+                r.user?.name ||
+                "Unknown Player";
 
-                  <div className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-purple-600 font-bold">
-                    {idx === 0
-                      ? "🥇"
-                      : idx === 1
-                        ? "🥈"
-                        : idx === 2
-                          ? "🥉"
-                          : idx + 1}
+              return (
+                <div
+                  key={r._id || `${playerName}-${rank}`}
+                  className={`flex items-center justify-between gap-4 p-4 rounded-2xl border transition hover:scale-[1.01] ${rank === 1
+                      ? "bg-yellow-500/10 border-yellow-400/40"
+                      : rank === 2
+                        ? "bg-gray-400/10 border-gray-400/30"
+                        : rank === 3
+                          ? "bg-orange-500/10 border-orange-400/30"
+                          : "bg-white/5 border-white/10"
+                    }`}
+                >
+
+                  {/* Rank + User */}
+                  <div className="flex items-center gap-3 min-w-0">
+
+                    <div className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-purple-600 font-bold">
+                      {rank === 1
+                        ? "🥇"
+                        : rank === 2
+                          ? "🥈"
+                          : rank === 3
+                            ? "🥉"
+                            : rank}
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate">
+                        {playerName}
+                      </p>
+
+                      <p className="text-xs text-gray-400 mt-1">
+                        {r.correctAnswers ?? 0} correct
+                        {" • "}
+                        {r.totalQuestions ?? 0} questions
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="min-w-0">
-                    <p className="font-semibold truncate">
-                      {r.user?.name || "Unknown"}
+                  {/* Score */}
+                  <div className="text-right shrink-0">
+                    <p className="font-bold text-pink-400">
+                      {r.score ?? 0}
                     </p>
 
-                    <p className="text-xs text-gray-400 mt-1 truncate">
-                      {r.category || "General Quiz"}
+                    <p className="text-xs text-gray-500 mt-1">
+                      Points
                     </p>
                   </div>
+
                 </div>
-
-                {/* Score */}
-                <div className="text-right shrink-0">
-                  <p className="font-bold text-pink-400">
-                    {r.score}/{r.totalQuestions}
-                  </p>
-
-                  <p className="text-xs text-gray-500 mt-1">
-                    Score
-                  </p>
-                </div>
-
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         {/* Footer */}
         {!loading && (
           <p className="text-xs text-gray-500 text-center mt-8">
-            Keep practicing and reach the top! 🚀
+            Keep playing and improve your score! 🚀
           </p>
         )}
 

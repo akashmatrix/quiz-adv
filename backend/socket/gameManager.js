@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 const Room = require("../models/Room");
-const RoomResult = require("../models/RoomResult").default;
+const RoomResult = require("../models/RoomResult");
 
 const games = {};
 

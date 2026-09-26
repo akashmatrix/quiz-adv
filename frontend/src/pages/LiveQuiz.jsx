@@ -22,15 +22,24 @@ export default function LiveQuiz() {
   );
 
   const [leaderboard, setLeaderboard] = useState([]);
-
   const [correctAnswerIndex, setCorrectAnswerIndex] = useState(null);
-
   const [finalLeaderboard, setFinalLeaderboard] = useState([]);
 
-  // Logged-in participant name
+  // =========================================================
+  // PARTICIPANT ID + NAME
+  // =========================================================
+
+  const participantId = localStorage.getItem(
+    `quizneon-participant-${roomCode}`
+  );
+
   const participantName = localStorage.getItem(
     `quizneon-name-${roomCode}`
   );
+
+  // =========================================================
+  // SOCKET EVENTS
+  // =========================================================
 
   useEffect(() => {
     function handleQuestion(data) {
@@ -55,9 +64,12 @@ export default function LiveQuiz() {
     socket.on("quiz:leaderboard", handleLeaderboard);
     socket.on("quiz:finished", handleFinished);
 
-    // Reconnect participant after page refresh
+    // =======================================================
+    // RECONNECT PARTICIPANT AFTER REFRESH
+    // =======================================================
+
     if (!isHost) {
-      const participantId = localStorage.getItem(
+      const savedParticipantId = localStorage.getItem(
         `quizneon-participant-${roomCode}`
       );
 
@@ -67,11 +79,11 @@ export default function LiveQuiz() {
 
       const token = localStorage.getItem("token");
 
-      if (participantId && savedParticipantName) {
+      if (savedParticipantId && savedParticipantName) {
         socket.emit("participant:joinRoom", {
           roomCode,
           participantName: savedParticipantName,
-          participantId,
+          participantId: savedParticipantId,
           token,
         });
       }
@@ -84,7 +96,10 @@ export default function LiveQuiz() {
     };
   }, [roomCode, isHost]);
 
-  // Countdown Timer
+  // =========================================================
+  // COUNTDOWN TIMER
+  // =========================================================
+
   useEffect(() => {
     if (phase !== "question" || timeLeft <= 0) return;
 
@@ -94,6 +109,10 @@ export default function LiveQuiz() {
 
     return () => clearTimeout(timer);
   }, [phase, timeLeft]);
+
+  // =========================================================
+  // SELECT ANSWER
+  // =========================================================
 
   const selectAnswer = (idx) => {
     if (selected !== null || isHost) return;
@@ -115,15 +134,19 @@ export default function LiveQuiz() {
       (a, b) => b.score - a.score
     );
 
-    // Top 3 players
+    // Top 3
     const topThree = sortedLeaderboard.slice(0, 3);
 
-    // Find current participant
-    const myIndex = participantName
-      ? sortedLeaderboard.findIndex(
-        (p) => p.name === participantName
-      )
-      : -1;
+    // =======================================================
+    // FIND CURRENT PLAYER USING participantId
+    // =======================================================
+
+    const myIndex =
+      !isHost && participantId
+        ? sortedLeaderboard.findIndex(
+          (p) => p.participantId === participantId
+        )
+        : -1;
 
     const myResult =
       myIndex !== -1
@@ -173,17 +196,18 @@ export default function LiveQuiz() {
               const rank = index + 1;
 
               const isMe =
-                participantName &&
-                p.name === participantName;
+                !isHost &&
+                participantId &&
+                p.participantId === participantId;
 
               return (
                 <div
-                  key={`${p.name}-${index}`}
+                  key={`${p.participantId || p.name}-${index}`}
                   className={`flex items-center justify-between gap-4 px-4 py-4 rounded-2xl border transition hover:scale-[1.01] ${rank === 1
-                    ? "bg-yellow-500/10 border-yellow-400/40"
-                    : rank === 2
-                      ? "bg-gray-400/10 border-gray-400/30"
-                      : "bg-orange-500/10 border-orange-400/30"
+                      ? "bg-yellow-500/10 border-yellow-400/40"
+                      : rank === 2
+                        ? "bg-gray-400/10 border-gray-400/30"
+                        : "bg-orange-500/10 border-orange-400/30"
                     }`}
                 >
 
@@ -215,14 +239,13 @@ export default function LiveQuiz() {
                       </p>
 
                     </div>
-
                   </div>
 
                   {/* Score */}
                   <div className="text-right shrink-0">
 
                     <p className="font-extrabold text-pink-400">
-                      {p.score} pts
+                      {p.score ?? 0} pts
                     </p>
 
                   </div>
@@ -233,10 +256,7 @@ export default function LiveQuiz() {
 
           </div>
 
-          {/* =================================================
-              SEPARATOR
-          ================================================= */}
-
+          {/* Separator */}
           {sortedLeaderboard.length > 3 && (
             <div className="my-6 text-center text-gray-500 text-xl tracking-[0.4em]">
               •••
@@ -261,7 +281,7 @@ export default function LiveQuiz() {
                 </p>
 
                 <p className="mt-3 text-2xl font-extrabold text-pink-400">
-                  {myResult.score} pts
+                  {myResult.score ?? 0} pts
                 </p>
 
                 <p className="mt-2 text-sm text-gray-400">
@@ -276,6 +296,7 @@ export default function LiveQuiz() {
           {/* =================================================
               TOP 3 USER MESSAGE
           ================================================= */}
+
           {!isHost && myResult && myRank <= 3 && (
             <div className="mt-5 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-center">
 
@@ -291,7 +312,7 @@ export default function LiveQuiz() {
           )}
 
           {/* =================================================
-              IF PARTICIPANT NOT FOUND
+              PLAYER NOT FOUND
           ================================================= */}
 
           {!isHost && !myResult && (
@@ -364,7 +385,7 @@ export default function LiveQuiz() {
 
             {leaderboard.map((p, idx) => (
               <div
-                key={idx}
+                key={p.participantId || `${p.name}-${idx}`}
                 className="flex justify-between items-center px-4 py-4 rounded-xl bg-white/5 border border-white/10"
               >
 
@@ -389,7 +410,7 @@ export default function LiveQuiz() {
                 </div>
 
                 <span className="font-bold text-purple-400">
-                  {p.score} pts
+                  {p.score ?? 0} pts
                 </span>
 
               </div>
@@ -466,8 +487,8 @@ export default function LiveQuiz() {
 
           <div
             className={`px-4 py-2 rounded-xl border font-bold ${timeLeft <= 5
-              ? "text-red-400 border-red-500/40 bg-red-500/10 animate-pulse"
-              : "text-pink-400 border-pink-500/30 bg-pink-500/10"
+                ? "text-red-400 border-red-500/40 bg-red-500/10 animate-pulse"
+                : "text-pink-400 border-pink-500/30 bg-pink-500/10"
               }`}
           >
             ⏱ {timeLeft}s
@@ -485,9 +506,7 @@ export default function LiveQuiz() {
                 0,
                 Math.min(
                   100,
-                  (timeLeft /
-                    (question.timeLimit || 1)) *
-                  100
+                  (timeLeft / (question.timeLimit || 1)) * 100
                 )
               )}%`,
             }}
@@ -530,8 +549,8 @@ export default function LiveQuiz() {
                 onClick={() => selectAnswer(idx)}
                 disabled={selected !== null}
                 className={`w-full flex items-center gap-3 text-left px-4 py-4 rounded-xl border transition duration-200 ${selected === idx
-                  ? "bg-gradient-to-r from-pink-500 to-purple-600 border-pink-400 text-white"
-                  : "bg-white/5 border-white/10 text-gray-200 hover:bg-purple-500/20 hover:border-purple-400"
+                    ? "bg-gradient-to-r from-pink-500 to-purple-600 border-pink-400 text-white"
+                    : "bg-white/5 border-white/10 text-gray-200 hover:bg-purple-500/20 hover:border-purple-400"
                   } disabled:cursor-not-allowed`}
               >
 
