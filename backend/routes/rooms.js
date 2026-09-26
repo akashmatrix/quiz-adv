@@ -55,8 +55,8 @@ router.post("/create", authMiddleware, async (req, res) => {
       // Set default time limit
       if (
         !q.timeLimit ||
-        q.timeLimit < 10 ||
-        q.timeLimit > 30
+        q.timeLimit < 2 ||
+        q.timeLimit > 120
       ) {
         q.timeLimit = 20;
       }

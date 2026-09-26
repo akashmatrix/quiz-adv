@@ -9,6 +9,7 @@ const authRoutes = require("./routes/auth");
 const questionRoutes = require("./routes/questions");
 const quizRoutes = require("./routes/quiz");
 const roomRoutes = require("./routes/rooms");
+const quizManagementRoutes = require("./routes/quizzes");
 const registerSocketHandlers = require("./socket/gameManager");
 
 const app = express();
@@ -27,6 +28,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/questions", questionRoutes);
 app.use("/api/quiz", quizRoutes);
 app.use("/api/rooms", roomRoutes);
+app.use("/api/quizzes", quizManagementRoutes);
 
 app.get("/", (req, res) => {
   res.send("Quiz App Backend is running");

@@ -7,6 +7,8 @@ const actions = [
   { icon: "⚡", title: "Create Room", description: "Build a custom quiz and challenge your friends.", route: "/create-room", label: "Create Quiz", accent: "from-pink-500 to-purple-500" },
   { icon: "🔑", title: "Join Room", description: "Enter a room code and join a live quiz battle.", route: "/join-room", label: "Join Battle", accent: "from-purple-500 to-indigo-500" },
   { icon: "🎯", title: "Practice Solo", description: "Improve your knowledge with individual practice.", route: "/practice", label: "Start Practice", accent: "from-indigo-500 to-blue-500" },
+  { icon: "🛠️", title: "Create Quiz", description: "Build and save your own reusable quiz.", route: "/create-quiz", label: "Create Quiz", accent: "from-pink-500 to-rose-500" },
+  { icon: "📚", title: "My Quizzes", description: "Edit, duplicate, delete, or host saved quizzes.", route: "/my-quizzes", label: "Open Library", accent: "from-violet-500 to-purple-600" },
 ];
 
 function StatCard({ icon, label, value, detail }) {
@@ -125,7 +127,7 @@ export default function Dashboard() {
         </section>
 
         <section className="mb-10">
-          <div className="mb-5 flex items-center justify-between"><h2 className="text-xl font-bold sm:text-2xl">Choose your battle</h2><span className="text-xs uppercase tracking-wider text-gray-500">3 MODES</span></div>
+          <div className="mb-5 flex items-center justify-between"><h2 className="text-xl font-bold sm:text-2xl">Choose your battle</h2><span className="text-xs uppercase tracking-wider text-gray-500">5 ACTIONS</span></div>
           <div className="grid gap-5 md:grid-cols-3">
             {actions.map((action) => <Link key={action.title} to={action.route} className="group relative overflow-hidden rounded-2xl border border-white/10 bg-[#191b24] p-6 shadow-lg transition-all duration-300 hover:-translate-y-2 hover:border-pink-400/40">
               <div className={`mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${action.accent} text-3xl shadow-lg transition-transform duration-300 group-hover:scale-110`}>{action.icon}</div>

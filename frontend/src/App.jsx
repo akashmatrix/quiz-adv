@@ -14,6 +14,8 @@ import CreateRoom from "./pages/CreateRoom.jsx";
 import JoinRoom from "./pages/JoinRoom.jsx";
 import RoomLobby from "./pages/RoomLobby.jsx";
 import LiveQuiz from "./pages/LiveQuiz.jsx";
+import CreateQuiz from "./pages/CreateQuiz.jsx";
+import MyQuizzes from "./pages/MyQuizzes.jsx";
 
 // ================= PROTECTED ROUTE =================
 
@@ -258,6 +260,25 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Leaderboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Quiz Management */}
+          <Route
+            path="/create-quiz"
+            element={
+              <ProtectedRoute>
+                <CreateQuiz />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/my-quizzes"
+            element={
+              <ProtectedRoute>
+                <MyQuizzes />
               </ProtectedRoute>
             }
           />
