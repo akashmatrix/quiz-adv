@@ -1,6 +1,7 @@
 const express = require("express");
 const Quiz = require("../models/Quiz");
 const Room = require("../models/Room");
+const Result = require("../models/Result");
 const authMiddleware = require("../middleware/auth");
 const { GoogleGenAI, createUserContent, createPartFromUri } = require("@google/genai");
 const fs = require("fs");
@@ -397,7 +398,7 @@ STRICT RULES:
       }
     }
     if (tempPath) {
-      try { fs.unlinkSync(tempPath); } catch {}
+      try { fs.unlinkSync(tempPath); } catch { }
     }
   }
 });
