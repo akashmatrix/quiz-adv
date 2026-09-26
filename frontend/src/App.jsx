@@ -15,7 +15,11 @@ import JoinRoom from "./pages/JoinRoom.jsx";
 import RoomLobby from "./pages/RoomLobby.jsx";
 import LiveQuiz from "./pages/LiveQuiz.jsx";
 import CreateQuiz from "./pages/CreateQuiz.jsx";
+import CreateQuizHome from "./pages/CreateQuizHome.jsx";
+import CustomQuiz from "./pages/CustomQuiz.jsx";
+import DocumentQuiz from "./pages/DocumentQuiz.jsx";
 import MyQuizzes from "./pages/MyQuizzes.jsx";
+import AIQuiz from "./pages/AIQuiz.jsx";
 
 // ================= PROTECTED ROUTE =================
 
@@ -269,7 +273,52 @@ export default function App() {
             path="/create-quiz"
             element={
               <ProtectedRoute>
+                <CreateQuizHome />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/create-quiz/manual"
+            element={
+              <ProtectedRoute>
                 <CreateQuiz />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/create-quiz/ai"
+            element={
+              <ProtectedRoute>
+                <AIQuiz />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/create-quiz/document"
+            element={
+              <ProtectedRoute>
+                <DocumentQuiz />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/quiz-custom"
+            element={
+              <ProtectedRoute>
+                <CustomQuiz />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ai-quiz"
+            element={
+              <ProtectedRoute>
+                <AIQuiz />
               </ProtectedRoute>
             }
           />

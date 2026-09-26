@@ -1,14 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import api from "../api/axios.js";
 import socket from "../socket.js";
 
-const makeQuestion = () => ({
+const makeQuestion = (timeLimit = 20) => ({
   questionText: "",
   options: ["", "", "", ""],
   correctAnswerIndex: 0,
   explanation: "",
-  timeLimit: 20,
+  timeLimit,
 });
 
 const defaultQuiz = () => ({
@@ -26,11 +26,20 @@ export default function CreateQuiz() {
   const [searchParams] = useSearchParams();
   const editId = searchParams.get("edit");
   const navigate = useNavigate();
-  const [quiz, setQuiz] = useState(defaultQuiz);
+  const location = useLocation();
+  const generatedQuiz = location.state?.generatedQuiz;
+  const [quiz, setQuiz] = useState(() => generatedQuiz || defaultQuiz());
   const [loading, setLoading] = useState(Boolean(editId));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    if (editId) return;
+    if (generatedQuiz) {
+      window.history.replaceState({}, document.title);
+    }
+  }, [editId, generatedQuiz]);
 
   useEffect(() => {
     if (!editId) return;
@@ -42,7 +51,19 @@ export default function CreateQuiz() {
     return () => { active = false; };
   }, [editId]);
 
-  const update = (field, value) => setQuiz((current) => ({ ...current, [field]: value }));
+  const update = (field, value) => setQuiz((current) => {
+    if (field === "timePerQuestion") {
+      return {
+        ...current,
+        [field]: value,
+        questions: current.questions.map((question) => ({
+          ...question,
+          timeLimit: Number(value),
+        })),
+      };
+    }
+    return { ...current, [field]: value };
+  });
 
   const updateQuestion = (index, field, value) => {
     setQuiz((current) => {
@@ -62,7 +83,7 @@ export default function CreateQuiz() {
     });
   };
 
-  const addQuestion = () => update("questions", [...quiz.questions, makeQuestion()]);
+  const addQuestion = () => update("questions", [...quiz.questions, makeQuestion(Number(quiz.timePerQuestion) || 20)]);
   const removeQuestion = (index) => {
     if (quiz.questions.length === 1) return;
     update("questions", quiz.questions.filter((_, i) => i !== index));
@@ -130,6 +151,35 @@ export default function CreateQuiz() {
     }
   };
 
+
+  const startWithoutSaving = async (mode) => {
+    setError("");
+    setNotice("");
+    const validation = validate();
+    if (validation) {
+      setError(validation);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (mode === "host") {
+        const { data } = await api.post("/quizzes/host-draft", {
+          ...quiz,
+          status: "draft",
+        });
+        if (!socket.connected) socket.connect();
+        navigate(`/room/${data.roomCode}`, { state: { isHost: true } });
+      } else {
+        navigate("/quiz-custom", { state: { quiz } });
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || `Could not ${mode === "host" ? "host" : "start"} quiz.`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const questionCount = useMemo(() => quiz.questions.length, [quiz.questions.length]);
 
   if (loading) return <div className="min-h-screen bg-[#11131c] p-10 text-center text-gray-300">Loading quiz...</div>;
@@ -140,7 +190,7 @@ export default function CreateQuiz() {
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <Link to="/my-quizzes" className="text-sm text-pink-300 hover:text-pink-200">← My Quizzes</Link>
-            <h1 className="mt-3 text-3xl font-extrabold sm:text-4xl">{editId ? "Edit Quiz" : "Create Manual Quiz"}</h1>
+            <h1 className="mt-3 text-3xl font-extrabold sm:text-4xl">{editId ? "Edit Quiz" : quiz.creationMethod === "ai" ? "Review AI Quiz" : "Create Manual Quiz"}</h1>
             <p className="mt-2 text-sm text-gray-400">Build it now, save it, and host it later.</p>
           </div>
           <span className="rounded-full border border-pink-400/20 bg-pink-500/10 px-4 py-2 text-sm text-pink-200">{questionCount} questions</span>
@@ -156,6 +206,7 @@ export default function CreateQuiz() {
             <label className="md:col-span-2 text-sm font-semibold text-gray-300">Description<textarea value={quiz.description} onChange={(e) => update("description", e.target.value)} placeholder="What this quiz covers..." rows="3" className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-normal outline-none focus:border-pink-500" /></label>
             <label className="text-sm font-semibold text-gray-300">Topic<input value={quiz.topic} onChange={(e) => update("topic", e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-normal outline-none focus:border-pink-500" /></label>
             <label className="text-sm font-semibold text-gray-300">Difficulty<select value={quiz.difficulty} onChange={(e) => update("difficulty", e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#20212d] px-4 py-3 font-normal outline-none focus:border-pink-500"><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label>
+            <label className="text-sm font-semibold text-gray-300">Default Time per Question<select value={quiz.timePerQuestion || 20} onChange={(e) => update("timePerQuestion", Number(e.target.value))} className="mt-2 w-full rounded-xl border border-white/10 bg-[#20212d] px-4 py-3 font-normal outline-none focus:border-pink-500">{[2,5,10,15,20,30,45,60,90,120].map((n) => <option key={n} value={n}>{n} seconds</option>)}</select><span className="mt-1 block text-xs font-normal text-gray-500">New questions use this time. Changing it applies the default to all current questions.</span></label>
           </div>
         </section>
 
@@ -180,10 +231,15 @@ export default function CreateQuiz() {
 
         <button type="button" onClick={addQuestion} className="mt-5 w-full rounded-2xl border-2 border-dashed border-pink-400/30 py-4 font-semibold text-pink-300 hover:bg-pink-500/10">+ Add Question</button>
 
-        <div className="sticky bottom-4 mt-7 flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#10111a]/95 p-3 shadow-2xl backdrop-blur sm:flex-row sm:justify-end">
-          <button type="button" onClick={() => saveQuiz("stay")} disabled={saving} className="rounded-xl border border-white/10 px-5 py-3 font-semibold hover:bg-white/5 disabled:opacity-50">{saving ? "Saving..." : "Save Quiz"}</button>
-          <button type="button" onClick={() => saveQuiz("list")} disabled={saving} className="rounded-xl border border-purple-400/30 bg-purple-500/10 px-5 py-3 font-semibold text-purple-200 disabled:opacity-50">Save & View My Quizzes</button>
-          <button type="button" onClick={() => saveQuiz("host")} disabled={saving} className="rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 px-5 py-3 font-bold shadow-lg shadow-pink-500/20 disabled:opacity-50">Save & Host ⚡</button>
+        <div className="sticky bottom-4 mt-7 rounded-2xl border border-white/10 bg-[#10111a]/95 p-3 shadow-2xl backdrop-blur">
+          <div className="mb-3 px-2 text-xs text-gray-500">Saving is optional. You can use this quiz immediately.</div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <button type="button" onClick={() => startWithoutSaving("solo")} disabled={saving} className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 font-semibold text-blue-200 disabled:opacity-50">🚀 Start Solo</button>
+            <button type="button" onClick={() => startWithoutSaving("host")} disabled={saving} className="rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 px-4 py-3 font-bold shadow-lg shadow-pink-500/20 disabled:opacity-50">⚡ Host Now</button>
+            <button type="button" onClick={() => saveQuiz("stay")} disabled={saving} className="rounded-xl border border-white/10 px-4 py-3 font-semibold hover:bg-white/5 disabled:opacity-50">{saving ? "Saving..." : "💾 Save Quiz"}</button>
+            <button type="button" onClick={() => saveQuiz("list")} disabled={saving} className="rounded-xl border border-purple-400/30 bg-purple-500/10 px-4 py-3 font-semibold text-purple-200 disabled:opacity-50">📚 Save & View</button>
+          </div>
+          <button type="button" onClick={() => saveQuiz("host")} disabled={saving} className="mt-2 w-full rounded-xl border border-pink-400/20 px-4 py-2 text-sm font-semibold text-pink-200 hover:bg-pink-500/5 disabled:opacity-50">Save & Host → My Room</button>
         </div>
       </div>
     </main>

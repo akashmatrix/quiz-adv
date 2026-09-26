@@ -4,10 +4,9 @@ import { useAuth } from "../context/AuthContext.jsx";
 import api from "../api/axios.js";
 
 const actions = [
-  { icon: "⚡", title: "Create Room", description: "Build a custom quiz and challenge your friends.", route: "/create-room", label: "Create Quiz", accent: "from-pink-500 to-purple-500" },
+  { icon: "🛠️", title: "Create Quiz", description: "Choose Manual or AI creation, review your quiz, then save, start solo, or host.", route: "/create-quiz", label: "Create Quiz", accent: "from-pink-500 to-purple-500" },
   { icon: "🔑", title: "Join Room", description: "Enter a room code and join a live quiz battle.", route: "/join-room", label: "Join Battle", accent: "from-purple-500 to-indigo-500" },
   { icon: "🎯", title: "Practice Solo", description: "Improve your knowledge with individual practice.", route: "/practice", label: "Start Practice", accent: "from-indigo-500 to-blue-500" },
-  { icon: "🛠️", title: "Create Quiz", description: "Build and save your own reusable quiz.", route: "/create-quiz", label: "Create Quiz", accent: "from-pink-500 to-rose-500" },
   { icon: "📚", title: "My Quizzes", description: "Edit, duplicate, delete, or host saved quizzes.", route: "/my-quizzes", label: "Open Library", accent: "from-violet-500 to-purple-600" },
 ];
 
