@@ -1,6 +1,7 @@
 const express = require("express");
 const Room = require("../models/Room");
 const Question = require("../models/Question");
+const RoomResult = require("../models/RoomResult");
 const authMiddleware = require("../middleware/auth");
 
 const router = express.Router();
@@ -88,6 +89,11 @@ router.post("/create", authMiddleware, async (req, res) => {
       hostName: req.user.name,
       questions,
     });
+    console.log("ROOM CREATED:", room.roomCode);
+    console.log(
+      "QUESTIONS SAVED IN QUESTION COLLECTION:",
+      savedQuestions.length
+    );
 
     res.status(201).json({
       message: "Room created and questions saved successfully",
@@ -100,6 +106,24 @@ router.post("/create", authMiddleware, async (req, res) => {
     res.status(500).json({
       message: "Server error creating room",
       error: err.message,
+    });
+  }
+});
+// GET: Current logged-in user's live multiplayer results
+router.get("/my-results", authMiddleware, async (req, res) => {
+  try {
+    const results = await RoomResult.find({
+      user: req.user.id,
+    })
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    res.json(results);
+  } catch (err) {
+    console.error("Error fetching live quiz results:", err);
+
+    res.status(500).json({
+      message: "Server error fetching live quiz results",
     });
   }
 });

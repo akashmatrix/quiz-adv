@@ -88,10 +88,13 @@ export default function RoomLobby() {
         participantName
       );
 
+      const token = localStorage.getItem("token");
+
       socket.emit("participant:joinRoom", {
         roomCode,
         participantName,
         participantId,
+        token,
       });
     }
     localStorage.setItem(
