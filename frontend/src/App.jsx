@@ -35,6 +35,7 @@ const Icon = ({ name, size = 19 }) => {
     x: <><path d="M6 6l12 12M18 6 6 18"/></>,
     menu: <><path d="M4 6h16M4 12h16M4 18h16"/></>,
     panelLeft: <><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M14 9l-2 3 2 3"/></>,
+    join: <><path d="M8 12h13"/><path d="m16 7 5 5-5 5"/><path d="M3 5v14"/></>,
   };
   return <svg {...common}>{paths[name]}</svg>;
 };
@@ -44,6 +45,7 @@ function ProtectedRoute({ children }) { const { user } = useAuth(); return user 
 const navItems = [
   { to: "/", label: "Dashboard", icon: "home", exact: true },
   { to: "/create-quiz", label: "Create Quiz", icon: "create" },
+  { to: "/join-room", label: "Join Room", icon: "join" },
   { to: "/my-quizzes", label: "My Quizzes", icon: "library" },
   { to: "/analytics", label: "Analytics", icon: "analytics" },
 ];

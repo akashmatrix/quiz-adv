@@ -63,9 +63,9 @@ export default function Dashboard() {
               Create, practice and host quizzes from one clean workspace.
             </p>
           </div>
-          <div className="flex gap-2">
-            <Link to="/create-quiz" className="btn-secondary">Build a Quiz</Link>
-            <Link to="/create-quiz" className="btn-primary">✦ Create Quiz</Link>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/join-room" className="btn-secondary">Join Room</Link>
+            <Link to="/create-quiz" className="btn-primary">Create Quiz</Link>
           </div>
         </section>
 
@@ -91,6 +91,7 @@ export default function Dashboard() {
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link to="/create-quiz" className="btn-primary">Start creating <span>→</span></Link>
+              <Link to="/join-room" className="btn-secondary">Join a live room <span>→</span></Link>
               <Link to="/leaderboard" className="btn-secondary">View leaderboard</Link>
             </div>
           </div>
