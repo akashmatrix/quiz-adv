@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext.jsx";
 import { useTheme } from "./context/ThemeContext.jsx";
@@ -99,6 +99,57 @@ function Sidebar({ collapsed, onToggle }) {
 
 export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => typeof window !== "undefined" && window.innerWidth <= 768);
+  const touchStartRef = useRef(null);
+
+  useEffect(() => {
+    const isMobile = () => window.matchMedia("(max-width: 768px)").matches;
+
+    const handleTouchStart = (event) => {
+      if (!isMobile()) return;
+      const touch = event.touches[0];
+      if (!touch) return;
+
+      // When the sidebar is closed, only a swipe starting very close to the
+      // left screen edge can open it. This avoids hijacking normal page swipes.
+      if (sidebarCollapsed) {
+        if (touch.clientX <= 24) touchStartRef.current = { x: touch.clientX, y: touch.clientY, edgeOpen: true };
+        return;
+      }
+
+      // When open, horizontal swipes beginning inside the sidebar can close it.
+      if (touch.clientX <= Math.min(300, window.innerWidth * 0.78)) {
+        touchStartRef.current = { x: touch.clientX, y: touch.clientY, edgeOpen: false };
+      }
+    };
+
+    const handleTouchEnd = (event) => {
+      const start = touchStartRef.current;
+      touchStartRef.current = null;
+      if (!start || !isMobile()) return;
+
+      const touch = event.changedTouches[0];
+      if (!touch) return;
+      const dx = touch.clientX - start.x;
+      const dy = touch.clientY - start.y;
+
+      // Ignore mostly vertical scrolling.
+      if (Math.abs(dx) < 55 || Math.abs(dx) <= Math.abs(dy) * 1.2) return;
+
+      if (sidebarCollapsed && start.edgeOpen && dx > 55) {
+        setSidebarCollapsed(false);
+      } else if (!sidebarCollapsed && !start.edgeOpen && dx < -55) {
+        setSidebarCollapsed(true);
+      }
+    };
+
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [sidebarCollapsed]);
+
   return <div className={`app-frame ${sidebarCollapsed ? "sidebar-is-collapsed" : "sidebar-is-expanded"}`}>
     <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(v => !v)}/>
     {!sidebarCollapsed && <button className="mobile-sidebar-backdrop" onClick={() => setSidebarCollapsed(true)} aria-label="Close sidebar" />}

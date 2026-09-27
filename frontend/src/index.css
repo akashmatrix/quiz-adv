@@ -192,13 +192,71 @@ button,input,select,textarea { font:inherit; }
   }
 
   .app-sidebar.sidebar-expanded {
-    width: min(280px, 84vw);
-    min-width: min(280px, 84vw);
+    width: min(300px, 78vw);
+    min-width: min(300px, 78vw);
     padding: 18px 12px 14px;
     background: rgba(10,13,21,.985);
     border-right: 1px solid rgba(148,163,184,.14);
     box-shadow: 24px 0 70px rgba(0,0,0,.42);
     backdrop-filter: blur(24px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+  }
+
+  /* Mobile expanded mode must behave like a real full sidebar, not the
+     desktop/tablet icon rail. The older max-width:900px rules hide labels,
+     so explicitly restore them here. */
+  .app-sidebar.sidebar-expanded .sidebar-brand,
+  .app-sidebar.sidebar-expanded .sidebar-create,
+  .app-sidebar.sidebar-expanded .sidebar-nav,
+  .app-sidebar.sidebar-expanded .sidebar-bottom {
+    display: grid;
+  }
+
+  .app-sidebar.sidebar-expanded .sidebar-brand {
+    display: flex;
+    justify-content: flex-start;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .app-sidebar.sidebar-expanded .brand-name,
+  .app-sidebar.sidebar-expanded .brand-caption,
+  .app-sidebar.sidebar-expanded .sidebar-create span,
+  .app-sidebar.sidebar-expanded .sidebar-label,
+  .app-sidebar.sidebar-expanded .sidebar-link > span:not(.sidebar-icon):not(.active-dot),
+  .app-sidebar.sidebar-expanded .profile-trigger-text,
+  .app-sidebar.sidebar-expanded .profile-chevron {
+    display: initial;
+    opacity: 1;
+    visibility: visible;
+    width: auto;
+    pointer-events: auto;
+  }
+
+  .app-sidebar.sidebar-expanded .sidebar-create a,
+  .app-sidebar.sidebar-expanded .sidebar-link,
+  .app-sidebar.sidebar-expanded .profile-trigger {
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-start;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .app-sidebar.sidebar-expanded .sidebar-plus,
+  .app-sidebar.sidebar-expanded .active-dot {
+    display: block;
+  }
+
+  .app-sidebar.sidebar-expanded .sidebar-icon {
+    flex: 0 0 20px;
+  }
+
+  .app-sidebar.sidebar-expanded .profile-trigger {
+    display: flex;
   }
 
   /* Keep only the toggle visible while the mobile sidebar is closed. */
@@ -238,6 +296,12 @@ button,input,select,textarea { font:inherit; }
 
   .app-sidebar.sidebar-expanded .sidebar-toggle {
     color: #c7d2fe;
+  }
+
+  /* Horizontal gestures are handled by App.jsx. Keep vertical scrolling natural. */
+  .app-sidebar.sidebar-expanded,
+  .app-sidebar.sidebar-collapsed {
+    touch-action: pan-y;
   }
 
   .mobile-sidebar-backdrop {
