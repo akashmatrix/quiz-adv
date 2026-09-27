@@ -22,7 +22,8 @@ const io = new Server(httpServer, {
 });
 
 app.use(cors());
-app.use(express.json({ limit: "15mb" }));
+// Document AI uploads are sent as base64 JSON. 100 MB binary files become ~134 MB base64, so allow headroom.
+app.use(express.json({ limit: "150mb" }));
 
 // REST routes
 app.use("/api/auth", authRoutes);

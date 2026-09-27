@@ -8,7 +8,7 @@ export default function Result() {
   if (!state) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4 bg-[#080014] text-white">
-        <div className="w-full max-w-md p-8 text-center rounded-3xl border border-purple-500/30 bg-white/5 backdrop-blur-xl">
+        <div className="w-full max-w-md p-8 text-center rounded-3xl border border-violet-500/30 bg-white/5 backdrop-blur-xl">
           <div className="text-5xl mb-4">📋</div>
 
           <h2 className="text-2xl font-bold mb-3">
@@ -21,7 +21,7 @@ export default function Result() {
 
           <button
             onClick={() => navigate("/")}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 font-bold transition hover:scale-[1.02]"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 font-bold transition hover:scale-[1.02]"
           >
             Take a Quiz →
           </button>
@@ -41,13 +41,13 @@ export default function Result() {
     <div className="min-h-screen px-4 py-10 bg-[#080014] text-white">
 
       {/* Background Glow */}
-      <div className="fixed top-10 left-10 w-72 h-72 bg-pink-600/20 rounded-full blur-[120px] pointer-events-none" />
-      <div className="fixed bottom-10 right-10 w-72 h-72 bg-purple-600/20 rounded-full blur-[120px] pointer-events-none" />
+      <div className="fixed top-10 left-10 w-72 h-72 bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none" />
+      <div className="fixed bottom-10 right-10 w-72 h-72 bg-violet-600/20 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="relative max-w-2xl mx-auto">
 
         {/* Header Card */}
-        <div className="p-8 rounded-3xl border border-purple-500/30 bg-white/5 backdrop-blur-xl shadow-2xl mb-6">
+        <div className="p-8 rounded-3xl border border-violet-500/30 bg-white/5 backdrop-blur-xl shadow-2xl mb-6">
 
           <div className="text-center">
             <div className="text-5xl mb-4">
@@ -69,13 +69,13 @@ export default function Result() {
 
           {/* Score */}
           <div className="my-8 text-center">
-            <p className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">
+            <p className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">
               {score} / {totalQuestions}
             </p>
 
             <p className="text-gray-400 mt-3">
               You scored{" "}
-              <span className="text-pink-400 font-bold">
+              <span className="text-indigo-400 font-bold">
                 {percentage}%
               </span>
             </p>
@@ -84,7 +84,7 @@ export default function Result() {
           {/* Progress Bar */}
           <div className="w-full h-3 rounded-full bg-white/10 overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-pink-500 to-purple-600 transition-all duration-700"
+              className="h-full bg-gradient-to-r from-indigo-500 to-violet-600 transition-all duration-700"
               style={{
                 width: `${Math.min(100, Math.max(0, percentage))}%`,
               }}
@@ -93,7 +93,7 @@ export default function Result() {
         </div>
 
         {/* Breakdown */}
-        <div className="p-6 md:p-8 rounded-3xl border border-purple-500/30 bg-white/5 backdrop-blur-xl">
+        <div className="p-6 md:p-8 rounded-3xl border border-violet-500/30 bg-white/5 backdrop-blur-xl">
 
           <h3 className="text-xl font-bold mb-5">
             Answer Review
@@ -161,14 +161,14 @@ export default function Result() {
 
             <button
               onClick={() => navigate("/")}
-              className="flex-1 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 font-bold transition hover:scale-[1.02]"
+              className="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 font-bold transition hover:scale-[1.02]"
             >
               🔄 Play Again
             </button>
 
             <button
               onClick={() => navigate("/leaderboard")}
-              className="flex-1 py-3 rounded-xl border border-purple-500/40 bg-white/5 font-bold hover:bg-purple-500/20 transition"
+              className="flex-1 py-3 rounded-xl border border-violet-500/40 bg-white/5 font-bold hover:bg-violet-500/20 transition"
             >
               🏆 Leaderboard
             </button>

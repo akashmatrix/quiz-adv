@@ -33,7 +33,7 @@ const RoomSchema = new mongoose.Schema(
       },
     },
     status: { type: String, enum: ["waiting", "active", "finished"], default: "waiting" },
-    maxParticipants: { type: Number, default: 50 },
+    maxParticipants: { type: Number, default: 150, min: 1, max: 150 },
   },
   { timestamps: true }
 );

@@ -33,7 +33,7 @@ export default function CustomQuiz() {
   }, [current, quiz, submitting]);
 
   if (!quiz?.questions?.length) {
-    return <div className="min-h-screen bg-[#11131c] p-8 text-center text-white"><p>No quiz session found.</p><button onClick={() => navigate("/create-quiz")} className="mt-4 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 px-5 py-3 font-bold">Back to Create Quiz</button></div>;
+    return <div className="min-h-screen bg-[#11131c] p-8 text-center text-white"><p>No quiz session found.</p><button onClick={() => navigate("/create-quiz")} className="mt-4 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 px-5 py-3 font-bold">Back to Create Quiz</button></div>;
   }
 
   const question = quiz.questions[current];
@@ -76,9 +76,9 @@ export default function CustomQuiz() {
       <div className="mx-auto max-w-3xl">
         <div className="mb-6 flex items-center justify-between gap-4">
           <div><p className="text-xs uppercase tracking-widest text-gray-500">{quiz.topic || "General"}</p><h1 className="mt-1 text-xl font-bold sm:text-2xl">{quiz.title}</h1></div>
-          <div className="rounded-full border border-pink-400/30 bg-pink-500/10 px-4 py-2 text-sm font-bold text-pink-200">⏱️ {seconds}s</div>
+          <div className="rounded-full border border-indigo-400/30 bg-indigo-500/10 px-4 py-2 text-sm font-bold text-indigo-200">⏱️ {seconds}s</div>
         </div>
-        <div className="mb-6 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-pink-500 to-purple-500" style={{ width: `${progress}%` }} /></div>
+        <div className="mb-6 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" style={{ width: `${progress}%` }} /></div>
 
         {error && <div className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>}
 
@@ -88,13 +88,13 @@ export default function CustomQuiz() {
           {question.imageUrl && <img src={question.imageUrl} alt="Question visual" className="mt-5 max-h-80 w-full rounded-2xl border border-white/10 object-contain bg-black/20" />}
           <div className="mt-7 grid gap-3">
             {question.options.map((option, index) => (
-              <button key={index} onClick={() => choose(index)} className={`flex items-center gap-4 rounded-2xl border p-4 text-left transition ${selected === index ? "border-pink-500 bg-pink-500/10" : "border-white/10 bg-white/[0.03] hover:border-pink-400/40"}`}>
+              <button key={index} onClick={() => choose(index)} className={`flex items-center gap-4 rounded-2xl border p-4 text-left transition ${selected === index ? "border-indigo-500 bg-indigo-500/10" : "border-white/10 bg-white/[0.03] hover:border-indigo-400/40"}`}>
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 font-bold">{String.fromCharCode(65 + index)}</span>
                 <span>{option}</span>
               </button>
             ))}
           </div>
-          <button onClick={nextQuestion} disabled={submitting} className="mt-7 w-full rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 px-5 py-3 font-bold disabled:opacity-50">
+          <button onClick={nextQuestion} disabled={submitting} className="mt-7 w-full rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 px-5 py-3 font-bold disabled:opacity-50">
             {current === quiz.questions.length - 1 ? "Finish Quiz" : "Next Question →"}
           </button>
         </section>

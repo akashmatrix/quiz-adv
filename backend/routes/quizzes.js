@@ -237,8 +237,9 @@ Rules:
       questions,
     });
   } catch (err) {
-    console.error("Gemini quiz generation error:", err.message);
-    res.status(502).json({ message: "AI quiz generation failed. Please try again." });
+    console.error("Gemini quiz generation error:", err);
+    const detail = String(err?.message || "Unknown AI provider error").slice(0, 500);
+    res.status(502).json({ message: `AI quiz generation failed: ${detail}` });
   }
 });
 

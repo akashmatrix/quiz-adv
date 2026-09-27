@@ -98,3 +98,9 @@ quiz-adv/
 │   └── public/
 │
 └── README.md
+
+
+## Capacity & document upload limits
+- Multiplayer rooms support up to 150 participants.
+- PDF/PPT/PPTX AI document uploads support files up to 100 MB.
+- The API JSON body limit is 150 MB to accommodate base64-encoded document uploads.

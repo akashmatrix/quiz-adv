@@ -88,6 +88,7 @@ router.post("/create", authMiddleware, async (req, res) => {
       host: req.user.id,
       hostName: req.user.name,
       questions,
+      maxParticipants: 150,
     });
     console.log("ROOM CREATED:", room.roomCode);
     console.log(

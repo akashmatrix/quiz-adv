@@ -4,7 +4,7 @@ const RoomResult = require("../models/RoomResult");
 
 const games = {};
 
-const MAX_PARTICIPANTS = 50;
+const MAX_PARTICIPANTS = 150;
 const LEADERBOARD_DISPLAY_MS = 5000;
 const GAME_CLEANUP_MS = 10 * 60 * 1000;
 
@@ -223,6 +223,7 @@ function registerSocketHandlers(io) {
             roomId: room._id,
             hostSocketId: socket.id,
             hostName: room.hostName,
+            maxParticipants: room.maxParticipants || MAX_PARTICIPANTS,
             questions: room.questions,
             currentIndex: -1,
             status: "waiting",
@@ -337,6 +338,7 @@ function registerSocketHandlers(io) {
               roomId: room._id,
               hostSocketId: null,
               hostName: room.hostName,
+              maxParticipants: room.maxParticipants || MAX_PARTICIPANTS,
               questions: room.questions,
               currentIndex: -1,
               status: "waiting",
@@ -407,11 +409,11 @@ function registerSocketHandlers(io) {
 
           if (
             Object.keys(game.participants).length >=
-            MAX_PARTICIPANTS
+            (game.maxParticipants || MAX_PARTICIPANTS)
           ) {
             return socket.emit(
               "error:message",
-              "Room is full (50/50 players)"
+              `Room is full (${game.maxParticipants || MAX_PARTICIPANTS}/${game.maxParticipants || MAX_PARTICIPANTS} players)`
             );
           }
 

@@ -38,9 +38,9 @@ export default function DocumentQuiz() {
       setError("Please select a PDF, PPT, or PPTX file.");
       return;
     }
-    if (selected.size > 10 * 1024 * 1024) {
+    if (selected.size > 100 * 1024 * 1024) {
       setFile(null);
-      setError("File size must be 10 MB or less.");
+      setError("File size must be 100 MB or less.");
       return;
     }
     setFile(selected);
@@ -74,7 +74,7 @@ export default function DocumentQuiz() {
   return (
     <main className="min-h-[calc(100vh-80px)] bg-[#11131c] px-4 py-8 text-white sm:px-8">
       <div className="mx-auto max-w-3xl">
-        <Link to="/create-quiz" className="text-sm text-pink-300 hover:text-pink-200">← Create Quiz</Link>
+        <Link to="/create-quiz" className="text-sm text-indigo-300 hover:text-indigo-200">← Create Quiz</Link>
         <div className="mt-5 mb-8">
           <div className="inline-flex rounded-2xl border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-sm text-blue-200">📄 Document Quiz Creator</div>
           <h1 className="mt-4 text-3xl font-extrabold sm:text-4xl">Generate Quiz from PDF / PPT</h1>
@@ -88,27 +88,27 @@ export default function DocumentQuiz() {
             <input type="file" accept=".pdf,.ppt,.pptx,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" onChange={chooseFile} className="hidden" />
             <div className="text-4xl">📎</div>
             <p className="mt-3 font-bold">{file ? file.name : "Choose PDF, PPT or PPTX"}</p>
-            <p className="mt-1 text-sm text-gray-500">Maximum file size: 10 MB</p>
+            <p className="mt-1 text-sm text-gray-500">Maximum file size: 100 MB</p>
           </label>
 
           <div className="grid gap-5 sm:grid-cols-3">
             <label className="block text-sm font-semibold text-gray-300">Difficulty
-              <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#20212d] px-4 py-3 font-normal outline-none focus:border-pink-500">
+              <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#20212d] px-4 py-3 font-normal outline-none focus:border-indigo-500">
                 <option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option>
               </select>
             </label>
             <label className="block text-sm font-semibold text-gray-300">Questions
-              <input type="number" min="1" max="50" value={questionCount} onChange={(e) => setQuestionCount(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-normal outline-none focus:border-pink-500" />
+              <input type="number" min="1" max="50" value={questionCount} onChange={(e) => setQuestionCount(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-normal outline-none focus:border-indigo-500" />
             </label>
             <label className="block text-sm font-semibold text-gray-300">Default Time / Question
-              <select value={timePerQuestion} onChange={(e) => setTimePerQuestion(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-white/10 bg-[#20212d] px-4 py-3 font-normal outline-none focus:border-pink-500">
+              <select value={timePerQuestion} onChange={(e) => setTimePerQuestion(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-white/10 bg-[#20212d] px-4 py-3 font-normal outline-none focus:border-indigo-500">
                 {timers.map((n) => <option key={n} value={n}>{n} seconds</option>)}
               </select>
             </label>
           </div>
 
           <label className="block text-sm font-semibold text-gray-300">Additional instructions <span className="font-normal text-gray-500">(optional)</span>
-            <textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} maxLength={1000} rows="4" placeholder="Example: Focus on Unit 2 concepts and include conceptual + application-based questions." className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-normal outline-none focus:border-pink-500" />
+            <textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} maxLength={1000} rows="4" placeholder="Example: Focus on Unit 2 concepts and include conceptual + application-based questions." className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-normal outline-none focus:border-indigo-500" />
           </label>
 
           <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/5 p-4 text-sm text-gray-300">
@@ -116,7 +116,7 @@ export default function DocumentQuiz() {
             <p className="mt-1">Questions are generated from the uploaded material only. You can edit, reorder, delete, save, start solo, or host them after generation.</p>
           </div>
 
-          <button type="submit" disabled={loading || !file} className="w-full rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 px-5 py-3 font-bold shadow-lg shadow-pink-500/20 disabled:cursor-not-allowed disabled:opacity-50">
+          <button type="submit" disabled={loading || !file} className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 px-5 py-3 font-bold shadow-lg shadow-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-50">
             {loading ? "Reading document & generating quiz..." : "✨ Generate Quiz from Document"}
           </button>
         </form>

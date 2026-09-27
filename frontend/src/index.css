@@ -2,7 +2,163 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+:root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color-scheme: dark; background:#080b12; }
+html { scroll-behavior:smooth; }
+body { margin:0; min-width:320px; background:#080b12; color:#eef2ff; }
+* { box-sizing:border-box; }
+button,input,select,textarea { font:inherit; }
+::selection { background:rgba(99,102,241,.35); color:white; }
+
+@layer components {
+  .app-frame { min-height:100vh; background:radial-gradient(circle at 75% -10%,rgba(79,70,229,.14),transparent 30rem),#080b12; }
+  .app-content { min-height:100vh; margin-left:256px; width:calc(100% - 256px); }
+  .app-sidebar { position:fixed; inset:0 auto 0 0; z-index:60; display:flex; width:256px; flex-direction:column; border-right:1px solid rgba(148,163,184,.12); background:rgba(10,13,21,.96); padding:22px 14px 14px; backdrop-filter:blur(24px); }
+  .sidebar-brand { display:flex; align-items:center; gap:11px; padding:0 10px 25px; }
+  .brand-mark { display:flex; width:40px; height:40px; align-items:center; justify-content:center; border-radius:12px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white; font-weight:900; box-shadow:0 10px 28px rgba(99,102,241,.24); }
+  .brand-name { font-size:16px; font-weight:900; letter-spacing:-.03em; color:#f8fafc; }.brand-name span{color:#8b8cfb}.brand-caption{font-size:9px;text-transform:uppercase;letter-spacing:.18em;color:#64748b;margin-top:2px}
+  .sidebar-create { margin:0 4px 24px; }.sidebar-create a { display:flex;align-items:center;gap:10px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#7c3aed);padding:11px 13px;color:white;font-size:13px;font-weight:800;box-shadow:0 12px 25px rgba(99,102,241,.18);transition:.2s }.sidebar-create a:hover{transform:translateY(-1px);filter:brightness(1.08)}.sidebar-plus{margin-left:auto;font-size:18px;font-weight:500;opacity:.8}
+  .sidebar-label{padding:0 12px;margin:0 0 8px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.2em;color:#475569}.sidebar-nav{display:grid;gap:4px}.sidebar-link{position:relative;display:flex;align-items:center;gap:12px;width:100%;border:0;border-radius:11px;padding:11px 12px;background:transparent;color:#8994a8;text-decoration:none;text-align:left;font-size:13px;font-weight:650;transition:.18s}.sidebar-link:hover{background:rgba(148,163,184,.07);color:#e2e8f0}.sidebar-link.active{background:rgba(99,102,241,.12);color:#fff}.sidebar-icon{display:grid;place-items:center;width:20px;color:#64748b}.sidebar-link.active .sidebar-icon{color:#a5b4fc}.active-dot{margin-left:auto;width:5px;height:5px;border-radius:50%;background:#818cf8;box-shadow:0 0 10px #818cf8}.sidebar-spacer{flex:1}.sidebar-bottom{display:grid;gap:5px}.sidebar-theme{color:#7d889c}.profile-wrap{position:relative}.profile-trigger{display:flex;width:100%;align-items:center;gap:10px;border:1px solid rgba(148,163,184,.09);border-radius:13px;background:rgba(255,255,255,.025);padding:9px;text-align:left;color:white;transition:.18s}.profile-trigger:hover,.profile-trigger.open{border-color:rgba(129,140,248,.28);background:rgba(99,102,241,.07)}.avatar{display:grid;flex:0 0 auto;width:34px;height:34px;place-items:center;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;font-size:12px;font-weight:900}.avatar-lg{width:40px;height:40px;border-radius:12px}.profile-trigger-text{min-width:0;display:grid;gap:2px}.profile-trigger-text strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.profile-trigger-text span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b}.profile-chevron{margin-left:auto;color:#64748b}.profile-popover{position:absolute;bottom:calc(100% + 10px);left:0;width:300px;overflow:hidden;border:1px solid rgba(148,163,184,.15);border-radius:17px;background:#111621;box-shadow:0 24px 60px rgba(0,0,0,.45);padding:12px}.profile-popover-head{display:flex;align-items:center;gap:10px;padding:5px}.icon-button{margin-left:auto;display:grid;place-items:center;width:30px;height:30px;border:0;border-radius:9px;background:rgba(255,255,255,.05);color:#94a3b8}.profile-details{display:grid;gap:1px;margin:12px 0;border-top:1px solid rgba(148,163,184,.1);border-bottom:1px solid rgba(148,163,184,.1);padding:8px 0}.profile-details div{display:grid;gap:2px;padding:8px}.profile-details span{font-size:9px;text-transform:uppercase;letter-spacing:.13em;color:#64748b}.profile-details strong{font-size:11px;color:#dbe4f4}.profile-logout{display:flex;align-items:center;gap:9px;width:100%;border:0;border-radius:10px;background:rgba(239,68,68,.07);padding:10px;color:#fca5a5;font-size:12px;font-weight:700}.profile-logout:hover{background:rgba(239,68,68,.12)}
+  .page-shell { position:relative;min-height:100vh;overflow:hidden;background:transparent;color:#eef2ff }.page-container{position:relative;z-index:10;width:100%;max-width:1180px;margin:auto;padding:34px 28px}.glass{border:1px solid rgba(148,163,184,.12);background:rgba(255,255,255,.035);box-shadow:0 24px 70px rgba(0,0,0,.18);backdrop-filter:blur(18px)}.surface{border:1px solid rgba(148,163,184,.12);background:#101520;box-shadow:0 20px 55px rgba(0,0,0,.18)}
+  .btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:11px;background:linear-gradient(135deg,#6366f1,#7c3aed);padding:11px 18px;color:white;font-size:13px;font-weight:800;box-shadow:0 10px 24px rgba(99,102,241,.18);transition:.2s}.btn-primary:hover{transform:translateY(-1px);filter:brightness(1.07)}.btn-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:11px;border:1px solid rgba(148,163,184,.14);background:rgba(255,255,255,.04);padding:11px 18px;color:#dbe4f4;font-size:13px;font-weight:700;transition:.2s}.btn-secondary:hover{border-color:rgba(129,140,248,.35);background:rgba(99,102,241,.08)}.input-modern{width:100%;border:1px solid rgba(148,163,184,.14);border-radius:11px;background:#0d121b;padding:11px 14px;color:#f8fafc;outline:none}.input-modern::placeholder{color:#475569}.input-modern:focus{border-color:rgba(129,140,248,.6);box-shadow:0 0 0 4px rgba(99,102,241,.1)}
+}
+@media(max-width:900px){.app-sidebar{width:78px;padding:18px 10px}.app-content{margin-left:78px;width:calc(100% - 78px)}.brand-name,.brand-caption,.sidebar-create span,.sidebar-label,.sidebar-link>span:not(.sidebar-icon):not(.active-dot),.profile-trigger-text,.profile-chevron{display:none}.sidebar-brand{justify-content:center;padding:0 0 22px}.sidebar-create a{justify-content:center}.sidebar-plus{display:none}.sidebar-link{justify-content:center;padding:12px}.active-dot{display:none}.profile-trigger{justify-content:center}.profile-popover{left:58px;bottom:0}}
+@media(max-width:640px){.app-sidebar{width:64px}.app-content{margin-left:64px;width:calc(100% - 64px)}.page-container{padding:24px 16px}.brand-mark{width:36px;height:36px}.sidebar-create{margin-left:0;margin-right:0}.profile-popover{position:fixed;left:72px;bottom:12px;width:min(300px,calc(100vw - 84px))}}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:#090d14}::-webkit-scrollbar-thumb{background:#263047;border-radius:999px}::-webkit-scrollbar-thumb:hover{background:#3a4662}
+
+/* One visual language across the application */
+.page-shell { background: transparent; }
+.surface, .glass { border-color: rgba(148,163,184,.12); }
+
+/* ChatGPT-style click-to-toggle sidebar
+   The sidebar never expands on hover. Clicking the top toggle changes
+   between the compact icon rail and the full workspace navigation. */
+@media (min-width: 901px) {
+  .app-sidebar {
+    width: 256px;
+    min-width: 256px;
+    overflow: hidden;
+    padding: 22px 14px 14px;
+    transition: width .32s cubic-bezier(.4,0,.2,1), padding .32s cubic-bezier(.4,0,.2,1), box-shadow .32s ease;
+  }
+
+  .app-sidebar.sidebar-collapsed {
+    width: 76px;
+    min-width: 76px;
+    padding: 22px 10px 14px;
+  }
+
+  .app-content {
+    margin-left: 256px;
+    width: calc(100% - 256px);
+    transition: margin-left .32s cubic-bezier(.4,0,.2,1), width .32s cubic-bezier(.4,0,.2,1);
+  }
+
+  .app-frame.sidebar-is-collapsed .app-content {
+    margin-left: 76px;
+    width: calc(100% - 76px);
+  }
+
+  .sidebar-toggle {
+    position: absolute;
+    top: 27px;
+    right: 13px;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(148,163,184,.12);
+    border-radius: 10px;
+    background: rgba(255,255,255,.035);
+    color: #94a3b8;
+    cursor: pointer;
+    transition: background .2s ease, color .2s ease, border-color .2s ease;
+  }
+
+  .sidebar-toggle:hover {
+    background: rgba(99,102,241,.12);
+    border-color: rgba(129,140,248,.3);
+    color: #c7d2fe;
+  }
+
+  .app-sidebar.sidebar-collapsed .sidebar-toggle {
+    right: 21px;
+  }
+
+  .app-sidebar.sidebar-collapsed .sidebar-brand {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* In compact mode the toggle itself becomes the top control,
+     so the Q mark never collides with it. */
+  .app-sidebar.sidebar-collapsed .brand-mark {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .app-sidebar.sidebar-collapsed .sidebar-brand > div,
+  .app-sidebar.sidebar-collapsed .sidebar-create span,
+  .app-sidebar.sidebar-collapsed .sidebar-label,
+  .app-sidebar.sidebar-collapsed .sidebar-link > span:not(.sidebar-icon):not(.active-dot),
+  .app-sidebar.sidebar-collapsed .profile-trigger-text,
+  .app-sidebar.sidebar-collapsed .profile-chevron {
+    opacity: 0;
+    visibility: hidden;
+    width: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .app-sidebar.sidebar-collapsed .sidebar-create,
+  .app-sidebar.sidebar-collapsed .sidebar-nav,
+  .app-sidebar.sidebar-collapsed .sidebar-bottom {
+    width: 56px;
+    min-width: 56px;
+  }
+
+  .app-sidebar.sidebar-collapsed .sidebar-create a,
+  .app-sidebar.sidebar-collapsed .sidebar-link,
+  .app-sidebar.sidebar-collapsed .profile-trigger {
+    width: 56px;
+    min-width: 56px;
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .app-sidebar.sidebar-collapsed .active-dot {
+    display: none;
+  }
+
+  .app-sidebar.sidebar-expanded .brand-name,
+  .app-sidebar.sidebar-expanded .brand-caption,
+  .app-sidebar.sidebar-expanded .sidebar-create span,
+  .app-sidebar.sidebar-expanded .sidebar-label,
+  .app-sidebar.sidebar-expanded .sidebar-link > span:not(.sidebar-icon):not(.active-dot),
+  .app-sidebar.sidebar-expanded .profile-trigger-text,
+  .app-sidebar.sidebar-expanded .profile-chevron {
+    opacity: 1;
+    visibility: visible;
+    width: auto;
+    pointer-events: auto;
+    transition: opacity .18s ease .08s;
+  }
+
+  .app-sidebar.sidebar-expanded .sidebar-toggle {
+    /* keep toggle at the top-right, like ChatGPT */
+    right: 13px;
+  }
+
+  .app-sidebar.sidebar-collapsed .sidebar-toggle {
+    color: #a5b4fc;
+  }
+}
+
+@media (max-width: 900px) {
+  .sidebar-toggle {
+    display: none;
+  }
 }

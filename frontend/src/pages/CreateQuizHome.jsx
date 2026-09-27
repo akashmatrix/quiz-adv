@@ -2,70 +2,45 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 const methods = [
-  {
-    icon: "✍️",
-    title: "Manual Quiz",
-    text: "Create every question yourself. Add options, correct answers, explanations and timers.",
-    to: "/create-quiz/manual",
-    button: "Create Manually",
-    className: "from-pink-500 to-rose-600",
-  },
-  {
-    icon: "🤖",
-    title: "AI Quiz",
-    text: "Give a topic, difficulty and number of questions. Gemini generates a quiz you can review and edit.",
-    to: "/create-quiz/ai",
-    button: "Generate with AI",
-    className: "from-purple-500 to-indigo-600",
-  },
-  {
-    icon: "📄",
-    title: "PDF / PPT Quiz",
-    text: "Turn your PDF, PPT or PPTX study material into quiz questions.",
-    to: "/create-quiz/document",
-    button: "Open Document Quiz",
-    className: "from-indigo-500 to-blue-600",
-  },
+  { icon: "✍", kicker: "FULL CONTROL", title: "Manual Quiz", text: "Write your own questions, options, answers, explanations and timers.", to: "/create-quiz/manual", button: "Create manually", accent: "from-indigo-500 to-violet-600" },
+  { icon: "✦", kicker: "AI POWERED", title: "AI Quiz", text: "Give a topic, difficulty and question count. Generate, review and edit.", to: "/create-quiz/ai", button: "Generate with AI", accent: "from-violet-500 to-indigo-600" },
+  { icon: "▤", kicker: "IMPORT", title: "PDF / PPT", text: "Turn your notes, slides or study material into editable quiz questions.", to: "/create-quiz/document", button: "Import document", accent: "from-indigo-500 to-cyan-600" },
 ];
 
 export default function CreateQuizHome() {
   return (
-    <main className="min-h-[calc(100vh-80px)] bg-[#11131c] px-4 py-10 text-white sm:px-8">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-10 text-center">
-          <p className="text-xs font-bold uppercase tracking-[0.3em] text-pink-300">Quiz Builder</p>
-          <h1 className="mt-3 text-4xl font-extrabold sm:text-5xl">Create Your Quiz</h1>
-          <p className="mx-auto mt-3 max-w-2xl text-gray-400">
-            Choose how you want to build your quiz. Every method opens the same review/edit workflow.
-          </p>
+    <div className="page-shell">
+      <div className="pointer-events-none absolute left-1/2 top-0 h-80 w-[40rem] -translate-x-1/2 rounded-full bg-violet-600/10 blur-[120px]" />
+      <div className="page-container max-w-6xl">
+        <div className="mx-auto max-w-3xl text-center">
+          <span className="inline-flex rounded-full border border-indigo-400/20 bg-indigo-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-300">Quiz Builder</span>
+          <h1 className="mt-5 text-4xl font-black tracking-tight sm:text-5xl">How do you want to build it?</h1>
+          <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-slate-400 sm:text-base">Choose a starting point. You can review and edit questions before saving or hosting your quiz.</p>
         </div>
 
-        <div className="grid gap-5 md:grid-cols-3">
-          {methods.map((method) => (
-            <div key={method.title} className="group rounded-3xl border border-white/10 bg-[#191b26] p-6 shadow-xl transition hover:-translate-y-1 hover:border-pink-400/30">
-              <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${method.className} text-2xl shadow-lg`}>
-                {method.icon}
+        <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+          {methods.map((method, index) => (
+            <Link key={method.title} to={method.to} className="group relative overflow-hidden rounded-[24px] border border-white/[0.08] bg-[#10121b]/95 p-6 shadow-2xl transition duration-200 hover:-translate-y-1.5 hover:border-indigo-400/25">
+              <div className="absolute right-5 top-5 text-xs font-bold text-slate-700">0{index + 1}</div>
+              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${method.accent} text-xl font-black shadow-lg`}>{method.icon}</div>
+              <p className="mt-7 text-[9px] font-bold tracking-[0.2em] text-slate-600">{method.kicker}</p>
+              <h2 className="mt-2 text-xl font-bold">{method.title}</h2>
+              <p className="mt-3 min-h-[72px] text-sm leading-6 text-slate-500">{method.text}</p>
+              <div className="mt-6 flex items-center justify-between border-t border-white/[0.06] pt-5 text-sm font-bold text-slate-200">
+                {method.button}<span className="text-indigo-400 transition group-hover:translate-x-1">→</span>
               </div>
-              <div className="mt-5 flex items-center gap-2">
-                <h2 className="text-xl font-bold">{method.title}</h2>
-              </div>
-              <p className="mt-3 min-h-20 text-sm leading-6 text-gray-400">{method.text}</p>
-
-              <Link to={method.to} className={`mt-6 block w-full rounded-xl bg-gradient-to-r ${method.className} px-4 py-3 text-center text-sm font-bold shadow-lg`}>
-                {method.button} →
-              </Link>
-            </div>
+            </Link>
           ))}
         </div>
 
-        <div className="mt-8 rounded-3xl border border-purple-400/20 bg-purple-500/5 p-6">
-          <p className="font-bold text-purple-200">One quiz, multiple ways to use it</p>
-          <p className="mt-2 text-sm leading-6 text-gray-400">
-            After creating and reviewing questions, you can save the quiz to My Quizzes, start a solo attempt, or host a multiplayer room.
-            Saving is optional for the current quiz session.
-          </p>
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          {["Save to My Quizzes", "Practice it solo", "Host a live room"].map((item, i) => (
+            <div key={item} className="rounded-xl border border-white/[0.06] bg-white/[0.025] px-4 py-3 text-center text-xs font-semibold text-slate-500">
+              <span className="mr-2 text-indigo-400">{["✓", "◈", "⌁"][i]}</span>{item}
+            </div>
+          ))}
         </div>
       </div>
-    </main>
+    </div>
   );
 }

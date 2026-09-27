@@ -91,16 +91,16 @@ export default function CreateRoom() {
     <div className="min-h-screen bg-[#11131c] px-4 py-10 text-white relative overflow-hidden">
 
       {/* Background Glow */}
-      <div className="absolute -top-32 -left-32 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-32 -left-32 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-violet-600/20 rounded-full blur-3xl pointer-events-none" />
 
       {/* Main Container */}
       <div className="relative z-10 max-w-4xl mx-auto">
 
         {/* Header */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-pink-500 to-purple-600 text-3xl shadow-lg shadow-pink-500/30 mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500 to-violet-600 text-3xl shadow-lg shadow-indigo-500/30 mb-4">
             ⚡
           </div>
 
@@ -129,7 +129,7 @@ export default function CreateRoom() {
               </p>
             </div>
 
-            <div className="rounded-full bg-purple-500/15 border border-purple-400/20 px-4 py-2 text-sm text-purple-300">
+            <div className="rounded-full bg-violet-500/15 border border-violet-400/20 px-4 py-2 text-sm text-violet-300">
               {questions.length}{" "}
               {questions.length === 1
                 ? "Question"
@@ -150,13 +150,13 @@ export default function CreateRoom() {
             {questions.map((q, qIdx) => (
               <div
                 key={qIdx}
-                className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6 transition hover:border-pink-400/30"
+                className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6 transition hover:border-indigo-400/30"
               >
 
                 {/* Question Header */}
                 <div className="flex items-center justify-between gap-3 mb-5">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-pink-500 to-purple-600 flex items-center justify-center font-bold text-sm">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-violet-600 flex items-center justify-center font-bold text-sm">
                       {qIdx + 1}
                     </div>
 
@@ -193,7 +193,7 @@ export default function CreateRoom() {
                     )
                   }
                   required
-                  className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-500 outline-none transition focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20"
+                  className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-500 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                 />
 
                 {/* Options */}
@@ -213,7 +213,7 @@ export default function CreateRoom() {
                       key={optIdx}
                       className={`flex items-center gap-3 rounded-xl border p-3 transition ${
                         q.correctAnswerIndex === optIdx
-                          ? "border-pink-500/60 bg-pink-500/10"
+                          ? "border-indigo-500/60 bg-indigo-500/10"
                           : "border-white/10 bg-white/[0.03]"
                       }`}
                     >
@@ -232,7 +232,7 @@ export default function CreateRoom() {
                           )
                         }
                         title="Mark as correct answer"
-                        className="h-4 w-4 accent-pink-500 cursor-pointer"
+                        className="h-4 w-4 accent-indigo-500 cursor-pointer"
                       />
 
                       <span className="text-xs font-bold text-gray-500">
@@ -264,7 +264,7 @@ export default function CreateRoom() {
                       Time Limit
                     </label>
 
-                    <span className="rounded-full bg-purple-500/20 px-3 py-1 text-sm font-bold text-purple-300">
+                    <span className="rounded-full bg-violet-500/20 px-3 py-1 text-sm font-bold text-violet-300">
                       {q.timeLimit} seconds
                     </span>
                   </div>
@@ -281,7 +281,7 @@ export default function CreateRoom() {
                         parseInt(e.target.value)
                       )
                     }
-                    className="w-full accent-pink-500 cursor-pointer"
+                    className="w-full accent-indigo-500 cursor-pointer"
                   />
 
                   <div className="flex justify-between text-xs text-gray-500 mt-2">
@@ -296,7 +296,7 @@ export default function CreateRoom() {
             <button
               type="button"
               onClick={addQuestion}
-              className="w-full rounded-2xl border-2 border-dashed border-pink-400/40 py-4 font-semibold text-pink-300 transition hover:border-pink-400 hover:bg-pink-500/10"
+              className="w-full rounded-2xl border-2 border-dashed border-indigo-400/40 py-4 font-semibold text-indigo-300 transition hover:border-indigo-400 hover:bg-indigo-500/10"
             >
               + Add Another Question
             </button>
@@ -305,7 +305,7 @@ export default function CreateRoom() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-full bg-gradient-to-r from-pink-500 to-purple-600 py-4 font-bold tracking-wide shadow-lg shadow-pink-500/20 transition hover:scale-[1.01] hover:shadow-pink-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-600 py-4 font-bold tracking-wide shadow-lg shadow-indigo-500/20 transition hover:scale-[1.01] hover:shadow-indigo-500/40 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading
                 ? "Creating Room..."

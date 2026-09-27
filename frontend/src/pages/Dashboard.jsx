@@ -3,348 +3,134 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import api from "../api/axios.js";
 
-const actions = [
-  {
-    icon: "🛠️",
-    title: "Create Quiz",
-    description:
-      "Choose Manual or AI creation, review your quiz, then save, start solo, or host.",
-    route: "/create-quiz",
-    label: "Create Quiz",
-    accent: "from-pink-500 to-purple-500",
-  },
-  {
-    icon: "🔑",
-    title: "Join Room",
-    description: "Enter a room code and join a live quiz battle.",
-    route: "/join-room",
-    label: "Join Battle",
-    accent: "from-purple-500 to-indigo-500",
-  },
-  {
-    icon: "📚",
-    title: "My Quizzes",
-    description: "Edit, duplicate, delete, or host saved quizzes.",
-    route: "/my-quizzes",
-    label: "Open Library",
-    accent: "from-violet-500 to-purple-600",
-  },
-];
-
 function StatCard({ icon, label, value, detail }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#191b24] p-5 shadow-lg">
-      <div className="flex items-center justify-between">
-        <span className="text-2xl">{icon}</span>
-        <span className="text-xs uppercase tracking-wider text-gray-500">
-          Stats
-        </span>
+    <div className="surface group rounded-2xl p-5 transition hover:-translate-y-0.5 hover:border-indigo-400/20">
+      <div className="flex items-start justify-between">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.05] text-lg text-indigo-300">{icon}</span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-600">Stats</span>
       </div>
-
-      <p className="mt-4 text-3xl font-extrabold text-white">{value}</p>
-
-      <p className="mt-1 text-sm font-semibold text-pink-200">{label}</p>
-
-      <p className="mt-1 text-xs text-gray-400">{detail}</p>
+      <p className="mt-5 text-3xl font-black tracking-tight text-white">{value}</p>
+      <p className="mt-1 text-sm font-semibold text-slate-200">{label}</p>
+      <p className="mt-1 text-xs text-slate-500">{detail}</p>
     </div>
   );
 }
 
 export default function Dashboard() {
   const { user } = useAuth();
-
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     let active = true;
-
-    async function loadResults() {
-      try {
-        setLoading(true);
-
-        const response = await api.get("/rooms/my-results");
-
-        if (active) {
-          setResults(
-            Array.isArray(response.data) ? response.data : []
-          );
-        }
-      } catch (err) {
-        if (active) {
-          setError(
-            err.response?.data?.message ||
-            "Unable to load quiz history."
-          );
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadResults();
-
-    return () => {
-      active = false;
-    };
+    api.get("/rooms/my-results")
+      .then(({ data }) => active && setResults(Array.isArray(data) ? data : []))
+      .catch((err) => active && setError(err.response?.data?.message || "Unable to load quiz history."))
+      .finally(() => active && setLoading(false));
+    return () => { active = false; };
   }, []);
 
   const stats = useMemo(() => {
     const attempted = results.length;
-
-    const totalQuestions = results.reduce(
-      (sum, item) => sum + (item.totalQuestions || 0),
-      0
-    );
-
-    // Live multiplayer uses correctAnswers.
-    // Solo practice uses score.
-    const totalCorrect = results.reduce(
-      (sum, item) =>
-        sum +
-        (item.correctAnswers !== undefined
-          ? item.correctAnswers
-          : item.score || 0),
-      0
-    );
-
-    const accuracy = totalQuestions
-      ? Math.round((totalCorrect / totalQuestions) * 100)
-      : 0;
-
-    const best = results.reduce((bestScore, item) => {
-      const correct =
-        item.correctAnswers !== undefined
-          ? item.correctAnswers
-          : item.score || 0;
-
-      const percentage = item.totalQuestions
-        ? (correct / item.totalQuestions) * 100
-        : 0;
-
-      return Math.max(bestScore, percentage);
+    const totalQuestions = results.reduce((sum, item) => sum + (item.totalQuestions || 0), 0);
+    const totalCorrect = results.reduce((sum, item) => sum + (item.correctAnswers !== undefined ? item.correctAnswers : item.score || 0), 0);
+    const accuracy = totalQuestions ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+    const best = results.reduce((max, item) => {
+      const correct = item.correctAnswers !== undefined ? item.correctAnswers : item.score || 0;
+      return Math.max(max, item.totalQuestions ? (correct / item.totalQuestions) * 100 : 0);
     }, 0);
-
-    return {
-      attempted,
-      accuracy,
-      best: Math.round(best),
-      totalScore: totalCorrect,
-    };
+    return { attempted, accuracy, best: Math.round(best), totalCorrect };
   }, [results]);
 
   return (
-    <main className="relative min-h-[calc(100vh-80px)] overflow-hidden bg-[#11131c] px-4 py-8 text-[#e1e1ef] sm:px-8 lg:px-12">
-      {/* Background glow */}
-      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 animate-pulse rounded-full bg-pink-600/20 blur-[120px]" />
+    <div className="page-shell">
+      <div className="pointer-events-none absolute -left-40 top-10 h-96 w-96 rounded-full bg-indigo-600/10 blur-[120px]" />
+      <div className="pointer-events-none absolute -right-40 top-72 h-[30rem] w-[30rem] rounded-full bg-violet-700/10 blur-[140px]" />
 
-      <div className="pointer-events-none absolute -bottom-40 -right-32 h-[30rem] w-[30rem] animate-pulse rounded-full bg-purple-700/20 blur-[130px]" />
-
-      <div className="relative z-10 mx-auto max-w-7xl">
-        {/* Header */}
-        <header className="mb-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+      <div className="page-container">
+        <section className="mb-8 grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
-            <p className="mb-3 text-xs font-bold uppercase tracking-[0.25em] text-pink-300">
-              ⚡ QuizNeon Arena
-            </p>
-
-            <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl">
-              Welcome back,{" "}
-              <span className="bg-gradient-to-r from-pink-300 via-pink-400 to-purple-400 bg-clip-text text-transparent">
-                {user?.name || "Player"}
-              </span>
-              !
-            </h1>
-
-            <p className="mt-3 max-w-xl text-sm leading-6 text-[#debec8] sm:text-base">
-              Track your progress, practice your skills, and climb the
-              leaderboard.
-            </p>
-          </div>
-
-          <Link
-            to="/leaderboard"
-            className="w-fit rounded-full border border-pink-400/30 bg-pink-500/10 px-5 py-3 text-sm font-semibold text-pink-200 transition hover:bg-pink-500/20"
-          >
-            🏆 Leaderboard →
-          </Link>
-        </header>
-
-        {/* Stats */}
-        <section className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            icon="📝"
-            label="Quizzes Attempted"
-            value={loading ? "—" : stats.attempted}
-            detail="Completed quizzes"
-          />
-
-          <StatCard
-            icon="🎯"
-            label="Overall Accuracy"
-            value={loading ? "—" : `${stats.accuracy}%`}
-            detail="Correct answers"
-          />
-
-          <StatCard
-            icon="🏆"
-            label="Best Performance"
-            value={loading ? "—" : `${stats.best}%`}
-            detail="Highest quiz percentage"
-          />
-
-          <StatCard
-            icon="✅"
-            label="Correct Answers"
-            value={loading ? "—" : stats.totalScore}
-            detail="Across your attempts"
-          />
-        </section>
-
-        {/* Error */}
-        {error && (
-          <div className="mb-6 rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-200">
-            {error}
-          </div>
-        )}
-
-        {/* Hero */}
-        <section className="mb-10 rounded-[2rem] border border-white/10 bg-gradient-to-br from-[#282333] via-[#1d1f2b] to-[#151724] p-6 shadow-2xl sm:p-10">
-          <span className="inline-flex rounded-full bg-purple-500/20 px-3 py-1.5 text-xs font-semibold text-purple-200">
-            YOUR QUIZ HUB
-          </span>
-
-          <h2 className="mt-4 text-3xl font-extrabold leading-tight sm:text-4xl">
-            Test your knowledge.
-            <br />
-            <span className="bg-gradient-to-r from-pink-300 to-purple-300 bg-clip-text text-transparent">
-              Beat the clock.
-            </span>
-          </h2>
-
-          <p className="mt-4 max-w-md text-sm leading-6 text-gray-400">
-            Challenge your friends in real-time quizzes or practice at your
-            own pace.
-          </p>
-        </section>
-
-        {/* Main Actions */}
-        <section className="mb-10">
-          <div className="mb-5 flex items-center justify-between">
-            <h2 className="text-xl font-bold sm:text-2xl">
-              Choose your battle
-            </h2>
-
-            <span className="text-xs uppercase tracking-wider text-gray-500">
-              3 ACTIONS
-            </span>
-          </div>
-
-          <div className="grid gap-5 md:grid-cols-3">
-            {actions.map((action) => (
-              <Link
-                key={action.title}
-                to={action.route}
-                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-[#191b24] p-6 shadow-lg transition-all duration-300 hover:-translate-y-2 hover:border-pink-400/40"
-              >
-                <div
-                  className={`mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${action.accent} text-3xl shadow-lg transition-transform duration-300 group-hover:scale-110`}
-                >
-                  {action.icon}
-                </div>
-
-                <h3 className="text-xl font-bold">
-                  {action.title}
-                </h3>
-
-                <p className="mt-3 min-h-[48px] text-sm leading-6 text-gray-400">
-                  {action.description}
-                </p>
-
-                <div className="mt-6 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-pink-300">
-                    {action.label}
-                  </span>
-
-                  <span className="text-lg">→</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        {/* Recent Quiz History */}
-        <section className="rounded-2xl border border-white/10 bg-[#191b24] p-6 shadow-lg">
-          <div className="mb-5 flex items-center justify-between">
-            <h2 className="text-xl font-bold">
-              Recent Quiz History
-            </h2>
-
-            <span className="text-xs text-gray-500">
-              LATEST 5
-            </span>
-          </div>
-
-          {loading ? (
-            <p className="text-sm text-gray-400">
-              Loading history...
-            </p>
-          ) : results.length === 0 ? (
-            <p className="text-sm text-gray-400">
-              No quiz attempts yet. Start practicing to see your history.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {results.slice(0, 5).map((item) => (
-                <div
-                  key={item._id}
-                  className="flex flex-col gap-2 rounded-xl bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div>
-                    <p className="font-semibold text-pink-100">
-                      {item.category || "General"}
-                    </p>
-
-                    <p className="text-xs text-gray-400">
-                      {item.createdAt
-                        ? new Date(item.createdAt).toLocaleString()
-                        : "Date unavailable"}
-                    </p>
-                  </div>
-
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-white">
-                      {item.correctAnswers !== undefined
-                        ? `${item.correctAnswers}/${item.totalQuestions} correct`
-                        : `${item.score}/${item.totalQuestions} correct`}
-                    </p>
-
-                    {item.score !== undefined && (
-                      <p className="mt-1 text-xs font-semibold text-pink-300">
-                        🏆 {item.score} pts
-                      </p>
-                    )}
-
-                    {item.rank !== undefined && (
-                      <p className="mt-1 text-xs font-semibold text-purple-300">
-                        🥇 Rank #{item.rank}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.25em] text-indigo-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 shadow-[0_0_12px_rgba(129,140,248,.8)]" />
+              Quiz workspace
             </div>
-          )}
+            <h1 className="text-3xl font-black tracking-tight sm:text-5xl">
+              Welcome back, <span className="bg-gradient-to-r from-indigo-300 to-violet-400 bg-clip-text text-transparent">{user?.name || "Player"}</span>
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400 sm:text-base">
+              Create, practice and host quizzes from one clean workspace.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Link to="/create-quiz" className="btn-secondary">Build a Quiz</Link>
+            <Link to="/create-quiz" className="btn-primary">✦ Create Quiz</Link>
+          </div>
         </section>
 
-        {/* Footer Tip */}
-        <div className="mt-10 text-center text-xs text-gray-500">
-          💡 Challenge your friends and climb the leaderboard.
-        </div>
+        <section className="mb-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard icon="▣" label="Quizzes Attempted" value={loading ? "—" : stats.attempted} detail="Completed attempts" />
+          <StatCard icon="◎" label="Overall Accuracy" value={loading ? "—" : `${stats.accuracy}%`} detail="Across your attempts" />
+          <StatCard icon="♛" label="Best Performance" value={loading ? "—" : `${stats.best}%`} detail="Highest percentage" />
+          <StatCard icon="✓" label="Correct Answers" value={loading ? "—" : stats.totalCorrect} detail="Total correct answers" />
+        </section>
+
+        {error && <div className="mb-6 rounded-xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-200">⚠ {error}</div>}
+
+        <section className="relative mb-8 overflow-hidden rounded-[28px] border border-white/[0.09] bg-gradient-to-br from-[#171927] via-[#10121c] to-[#0c0e16] p-7 shadow-2xl sm:p-10">
+          <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-violet-500/15 blur-[80px]" />
+          <div className="relative max-w-2xl">
+            <span className="inline-flex rounded-full border border-indigo-400/20 bg-indigo-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-indigo-300">Build your next challenge</span>
+            <h2 className="mt-5 text-3xl font-black leading-tight sm:text-4xl">
+              One place for every quiz.
+              <span className="block bg-gradient-to-r from-indigo-300 via-violet-300 to-violet-400 bg-clip-text text-transparent">Create. Practice. Compete.</span>
+            </h2>
+            <p className="mt-4 max-w-xl text-sm leading-6 text-slate-400">
+              Start from scratch, let AI generate questions, import study material, or jump into a live room.
+            </p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link to="/create-quiz" className="btn-primary">Start creating <span>→</span></Link>
+              <Link to="/leaderboard" className="btn-secondary">View leaderboard</Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="surface rounded-2xl p-5 sm:p-6">
+          <div className="mb-5 flex items-center justify-between">
+            <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Activity</p><h2 className="mt-1 text-lg font-bold">Recent quiz history</h2></div>
+            <span className="rounded-full bg-white/[0.04] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">Latest 5</span>
+          </div>
+
+          {loading ? <div className="rounded-xl bg-white/[0.025] p-5 text-sm text-slate-500">Loading your activity...</div> :
+            results.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-white/[0.09] p-8 text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10 text-xl">◈</div>
+                <p className="mt-3 font-semibold">No attempts yet</p>
+                <p className="mt-1 text-sm text-slate-500">Create or host a quiz and your activity will appear here.</p>
+                <Link to="/create-quiz" className="mt-4 inline-flex text-sm font-bold text-indigo-300 hover:text-indigo-200">Create a quiz →</Link>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {results.slice(0, 5).map((item) => (
+                  <div key={item._id} className="flex flex-col gap-3 rounded-xl border border-white/[0.05] bg-white/[0.025] p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500/20 to-violet-500/20 text-sm text-indigo-300">Q</div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-200">{item.category || "General Quiz"}</p>
+                        <p className="mt-0.5 text-xs text-slate-600">{item.createdAt ? new Date(item.createdAt).toLocaleString() : "Date unavailable"}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-5 sm:text-right">
+                      <div><p className="text-sm font-bold">{item.correctAnswers !== undefined ? `${item.correctAnswers}/${item.totalQuestions}` : `${item.score}/${item.totalQuestions}`}</p><p className="text-[10px] uppercase tracking-wider text-slate-600">Correct</p></div>
+                      {item.rank !== undefined && <div><p className="text-sm font-bold text-violet-300">#{item.rank}</p><p className="text-[10px] uppercase tracking-wider text-slate-600">Rank</p></div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+        </section>
       </div>
-    </main>
+    </div>
   );
 }

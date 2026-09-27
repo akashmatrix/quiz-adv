@@ -98,20 +98,20 @@ export default function Quiz() {
       <div className="min-h-screen bg-[#080014] text-white px-4 py-12 relative overflow-hidden">
 
         {/* Background Glow */}
-        <div className="absolute top-10 left-10 w-72 h-72 bg-pink-600/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-10 right-10 w-72 h-72 bg-purple-600/20 rounded-full blur-3xl" />
+        <div className="absolute top-10 left-10 w-72 h-72 bg-indigo-600/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-10 right-10 w-72 h-72 bg-violet-600/20 rounded-full blur-3xl" />
 
         <div className="relative z-10 max-w-md mx-auto">
 
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500 to-purple-600 shadow-lg shadow-pink-500/30 mb-5">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30 mb-5">
               <span className="text-3xl">🧠</span>
             </div>
 
             <h1 className="text-3xl font-extrabold tracking-tight">
               Start Your{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">
                 Quiz
               </span>
             </h1>
@@ -122,7 +122,7 @@ export default function Quiz() {
           </div>
 
           {/* Card */}
-          <div className="bg-white/[0.06] backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl shadow-purple-950/40">
+          <div className="bg-white/[0.06] backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl shadow-violet-950/40">
 
             {/* Error */}
             {error && (
@@ -140,7 +140,7 @@ export default function Quiz() {
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-4 py-3 mb-6 rounded-xl bg-[#160b29] border border-white/10 text-white outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition cursor-pointer"
+              className="w-full px-4 py-3 mb-6 rounded-xl bg-[#160b29] border border-white/10 text-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition cursor-pointer"
             >
               <option value="">🌐 All Categories</option>
 
@@ -156,13 +156,13 @@ export default function Quiz() {
               <div className="bg-white/[0.05] border border-white/10 rounded-xl p-3 text-center">
                 <p className="text-xl mb-1">📝</p>
                 <p className="text-xs text-gray-400">Questions</p>
-                <p className="font-bold text-pink-300">Multiple</p>
+                <p className="font-bold text-indigo-300">Multiple</p>
               </div>
 
               <div className="bg-white/[0.05] border border-white/10 rounded-xl p-3 text-center">
                 <p className="text-xl mb-1">⚡</p>
                 <p className="text-xs text-gray-400">Difficulty</p>
-                <p className="font-bold text-purple-300">Mixed</p>
+                <p className="font-bold text-violet-300">Mixed</p>
               </div>
             </div>
 
@@ -170,7 +170,7 @@ export default function Quiz() {
             <button
               onClick={startQuiz}
               disabled={loading}
-              className="w-full py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 shadow-lg shadow-pink-600/20 transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              className="w-full py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 shadow-lg shadow-indigo-600/20 transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -198,8 +198,8 @@ export default function Quiz() {
     <div className="min-h-screen bg-[#080014] text-white px-4 py-8 relative overflow-hidden">
 
       {/* Background Glow */}
-      <div className="absolute top-0 left-0 w-80 h-80 bg-pink-600/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 right-0 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl" />
+      <div className="absolute top-0 left-0 w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 right-0 w-80 h-80 bg-violet-600/10 rounded-full blur-3xl" />
 
       <div className="relative z-10 max-w-2xl mx-auto">
 
@@ -210,7 +210,7 @@ export default function Quiz() {
               Current Category
             </p>
 
-            <p className="text-sm font-bold text-pink-300 mt-1">
+            <p className="text-sm font-bold text-indigo-300 mt-1">
               {category || "General"}
             </p>
           </div>
@@ -228,17 +228,17 @@ export default function Quiz() {
         {/* Progress Bar */}
         <div className="h-2 bg-white/10 rounded-full overflow-hidden mb-8">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-pink-500 to-purple-500 transition-all duration-500"
+            className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
 
         {/* Quiz Card */}
-        <div className="bg-white/[0.06] backdrop-blur-xl border border-white/10 rounded-3xl p-5 sm:p-8 shadow-2xl shadow-purple-950/40">
+        <div className="bg-white/[0.06] backdrop-blur-xl border border-white/10 rounded-3xl p-5 sm:p-8 shadow-2xl shadow-violet-950/40">
 
           {/* Question Number */}
           <div className="flex items-center gap-2 mb-5">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-pink-500 to-purple-600 font-extrabold shadow-lg shadow-pink-500/20">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-indigo-500 to-violet-600 font-extrabold shadow-lg shadow-indigo-500/20">
               {current + 1}
             </div>
 
@@ -263,16 +263,16 @@ export default function Quiz() {
                   onClick={() => selectAnswer(q._id, idx)}
                   className={`w-full flex items-center gap-4 text-left px-4 py-4 rounded-2xl border transition-all duration-200 group ${
                     isSelected
-                      ? "bg-gradient-to-r from-pink-500/20 to-purple-500/20 border-pink-500 shadow-lg shadow-pink-500/10"
-                      : "bg-white/[0.03] border-white/10 hover:bg-white/[0.08] hover:border-pink-500/50"
+                      ? "bg-gradient-to-r from-indigo-500/20 to-violet-500/20 border-indigo-500 shadow-lg shadow-indigo-500/10"
+                      : "bg-white/[0.03] border-white/10 hover:bg-white/[0.08] hover:border-indigo-500/50"
                   }`}
                 >
                   {/* Option Letter */}
                   <span
                     className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm transition ${
                       isSelected
-                        ? "bg-gradient-to-br from-pink-500 to-purple-600 text-white"
-                        : "bg-white/10 text-gray-300 group-hover:bg-pink-500/20 group-hover:text-pink-300"
+                        ? "bg-gradient-to-br from-indigo-500 to-violet-600 text-white"
+                        : "bg-white/10 text-gray-300 group-hover:bg-indigo-500/20 group-hover:text-indigo-300"
                     }`}
                   >
                     {String.fromCharCode(65 + idx)}
@@ -291,7 +291,7 @@ export default function Quiz() {
 
                   {/* Selected Icon */}
                   {isSelected && (
-                    <span className="text-pink-400 text-lg">
+                    <span className="text-indigo-400 text-lg">
                       ✓
                     </span>
                   )}
@@ -311,7 +311,7 @@ export default function Quiz() {
           <button
             onClick={nextQuestion}
             disabled={selectedAnswer === undefined || loading}
-            className="w-full mt-8 py-4 rounded-2xl font-bold text-white bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 shadow-lg shadow-pink-600/20 transition-all duration-300 hover:scale-[1.02] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+            className="w-full mt-8 py-4 rounded-2xl font-bold text-white bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 shadow-lg shadow-indigo-600/20 transition-all duration-300 hover:scale-[1.02] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
             {current === questions.length - 1
               ? loading

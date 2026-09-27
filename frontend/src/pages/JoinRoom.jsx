@@ -28,15 +28,15 @@ export default function JoinRoom() {
     <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-[#080014] text-white">
 
       {/* Background Glow */}
-      <div className="absolute top-20 left-10 w-72 h-72 bg-pink-600/20 rounded-full blur-[120px]" />
-      <div className="absolute bottom-10 right-10 w-72 h-72 bg-purple-600/20 rounded-full blur-[120px]" />
+      <div className="absolute top-20 left-10 w-72 h-72 bg-indigo-600/20 rounded-full blur-[120px]" />
+      <div className="absolute bottom-10 right-10 w-72 h-72 bg-violet-600/20 rounded-full blur-[120px]" />
 
       {/* Main Card */}
-      <div className="relative w-full max-w-md p-8 rounded-3xl border border-purple-500/30 bg-white/5 backdrop-blur-xl shadow-2xl shadow-purple-900/20">
+      <div className="relative w-full max-w-md p-8 rounded-3xl border border-violet-500/30 bg-white/5 backdrop-blur-xl shadow-2xl shadow-violet-900/20">
 
         {/* Icon */}
         <div className="flex justify-center mb-5">
-          <div className="w-16 h-16 flex items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 to-purple-600 shadow-lg shadow-pink-500/30">
+          <div className="w-16 h-16 flex items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30">
             <span className="text-3xl">🚀</span>
           </div>
         </div>
@@ -75,7 +75,7 @@ export default function JoinRoom() {
                 setError("");
               }}
               maxLength={6}
-              className="w-full px-4 py-3 rounded-xl border border-purple-500/30 bg-black/30 text-white placeholder-gray-500 text-center font-bold tracking-[0.4em] uppercase outline-none transition focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20"
+              className="w-full px-4 py-3 rounded-xl border border-violet-500/30 bg-black/30 text-white placeholder-gray-500 text-center font-bold tracking-[0.4em] uppercase outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
             />
           </div>
 
@@ -94,14 +94,14 @@ export default function JoinRoom() {
                 setError("");
               }}
               maxLength={30}
-              className="w-full px-4 py-3 rounded-xl border border-purple-500/30 bg-black/30 text-white placeholder-gray-500 outline-none transition focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20"
+              className="w-full px-4 py-3 rounded-xl border border-violet-500/30 bg-black/30 text-white placeholder-gray-500 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
             />
           </div>
 
           {/* Join Button */}
           <button
             type="submit"
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-lg shadow-lg shadow-pink-500/20 transition duration-300 hover:scale-[1.02] hover:shadow-pink-500/40 active:scale-95"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-bold text-lg shadow-lg shadow-indigo-500/20 transition duration-300 hover:scale-[1.02] hover:shadow-indigo-500/40 active:scale-95"
           >
             Join Room →
           </button>

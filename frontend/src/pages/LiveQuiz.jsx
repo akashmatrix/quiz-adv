@@ -162,12 +162,12 @@ export default function LiveQuiz() {
       <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-[#080014] text-white">
 
         {/* Background Glow */}
-        <div className="fixed top-10 left-10 w-72 h-72 bg-pink-600/20 rounded-full blur-[120px] pointer-events-none" />
+        <div className="fixed top-10 left-10 w-72 h-72 bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none" />
 
-        <div className="fixed bottom-10 right-10 w-72 h-72 bg-purple-600/20 rounded-full blur-[120px] pointer-events-none" />
+        <div className="fixed bottom-10 right-10 w-72 h-72 bg-violet-600/20 rounded-full blur-[120px] pointer-events-none" />
 
         {/* Main Card */}
-        <div className="relative w-full max-w-xl p-8 rounded-3xl border border-purple-500/30 bg-white/5 backdrop-blur-xl shadow-2xl">
+        <div className="relative w-full max-w-xl p-8 rounded-3xl border border-violet-500/30 bg-white/5 backdrop-blur-xl shadow-2xl">
 
           {/* Header */}
           <div className="text-center mb-8">
@@ -228,7 +228,7 @@ export default function LiveQuiz() {
                         #{rank} {p.name}
 
                         {isMe && (
-                          <span className="ml-2 text-xs text-pink-300">
+                          <span className="ml-2 text-xs text-indigo-300">
                             YOU
                           </span>
                         )}
@@ -244,7 +244,7 @@ export default function LiveQuiz() {
                   {/* Score */}
                   <div className="text-right shrink-0">
 
-                    <p className="font-extrabold text-pink-400">
+                    <p className="font-extrabold text-indigo-400">
                       {p.score ?? 0} pts
                     </p>
 
@@ -268,9 +268,9 @@ export default function LiveQuiz() {
           ================================================= */}
 
           {myResult && myRank > 3 && (
-            <div className="mt-4 p-6 rounded-2xl border border-pink-400/30 bg-gradient-to-r from-pink-500/10 to-purple-500/10">
+            <div className="mt-4 p-6 rounded-2xl border border-indigo-400/30 bg-gradient-to-r from-indigo-500/10 to-violet-500/10">
 
-              <p className="text-xs uppercase tracking-[0.2em] text-pink-300 font-bold text-center">
+              <p className="text-xs uppercase tracking-[0.2em] text-indigo-300 font-bold text-center">
                 Your Result
               </p>
 
@@ -280,7 +280,7 @@ export default function LiveQuiz() {
                   Rank #{myRank}
                 </p>
 
-                <p className="mt-3 text-2xl font-extrabold text-pink-400">
+                <p className="mt-3 text-2xl font-extrabold text-indigo-400">
                   {myResult.score ?? 0} pts
                 </p>
 
@@ -330,9 +330,9 @@ export default function LiveQuiz() {
           ================================================= */}
 
           {isHost && (
-            <div className="mt-5 p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 text-center">
+            <div className="mt-5 p-4 rounded-xl bg-violet-500/10 border border-violet-500/20 text-center">
 
-              <p className="text-purple-300 text-sm">
+              <p className="text-violet-300 text-sm">
                 👑 You are the host of this quiz.
               </p>
 
@@ -345,7 +345,7 @@ export default function LiveQuiz() {
 
           <button
             onClick={() => navigate("/")}
-            className="w-full mt-8 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 font-bold text-lg transition hover:scale-[1.02]"
+            className="w-full mt-8 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 font-bold text-lg transition hover:scale-[1.02]"
           >
             Back to Home →
           </button>
@@ -363,7 +363,7 @@ export default function LiveQuiz() {
     return (
       <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-[#080014] text-white">
 
-        <div className="relative w-full max-w-xl p-8 rounded-3xl border border-purple-500/30 bg-white/5 backdrop-blur-xl shadow-2xl">
+        <div className="relative w-full max-w-xl p-8 rounded-3xl border border-violet-500/30 bg-white/5 backdrop-blur-xl shadow-2xl">
 
           <div className="text-center mb-8">
 
@@ -409,7 +409,7 @@ export default function LiveQuiz() {
 
                 </div>
 
-                <span className="font-bold text-purple-400">
+                <span className="font-bold text-violet-400">
                   {p.score ?? 0} pts
                 </span>
 
@@ -463,11 +463,11 @@ export default function LiveQuiz() {
     <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-[#080014] text-white">
 
       {/* Background Glow */}
-      <div className="absolute top-10 left-10 w-72 h-72 bg-pink-600/20 rounded-full blur-[120px]" />
+      <div className="absolute top-10 left-10 w-72 h-72 bg-indigo-600/20 rounded-full blur-[120px]" />
 
-      <div className="absolute bottom-10 right-10 w-72 h-72 bg-purple-600/20 rounded-full blur-[120px]" />
+      <div className="absolute bottom-10 right-10 w-72 h-72 bg-violet-600/20 rounded-full blur-[120px]" />
 
-      <div className="relative w-full max-w-xl p-8 rounded-3xl border border-purple-500/30 bg-white/5 backdrop-blur-xl shadow-2xl">
+      <div className="relative w-full max-w-xl p-8 rounded-3xl border border-violet-500/30 bg-white/5 backdrop-blur-xl shadow-2xl">
 
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
@@ -488,7 +488,7 @@ export default function LiveQuiz() {
           <div
             className={`px-4 py-2 rounded-xl border font-bold ${timeLeft <= 5
                 ? "text-red-400 border-red-500/40 bg-red-500/10 animate-pulse"
-                : "text-pink-400 border-pink-500/30 bg-pink-500/10"
+                : "text-indigo-400 border-indigo-500/30 bg-indigo-500/10"
               }`}
           >
             ⏱ {timeLeft}s
@@ -500,7 +500,7 @@ export default function LiveQuiz() {
         <div className="w-full h-2 rounded-full bg-white/10 mb-8 overflow-hidden">
 
           <div
-            className="h-full bg-gradient-to-r from-pink-500 to-purple-600 transition-all duration-1000"
+            className="h-full bg-gradient-to-r from-indigo-500 to-violet-600 transition-all duration-1000"
             style={{
               width: `${Math.max(
                 0,
@@ -529,7 +529,7 @@ export default function LiveQuiz() {
 
         {/* Host View */}
         {isHost ? (
-          <div className="p-6 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-center">
+          <div className="p-6 rounded-2xl bg-violet-500/10 border border-violet-500/20 text-center">
 
             <div className="text-4xl mb-3">
               🎯
@@ -553,8 +553,8 @@ export default function LiveQuiz() {
                 onClick={() => selectAnswer(idx)}
                 disabled={selected !== null}
                 className={`w-full flex items-center gap-3 text-left px-4 py-4 rounded-xl border transition duration-200 ${selected === idx
-                    ? "bg-gradient-to-r from-pink-500 to-purple-600 border-pink-400 text-white"
-                    : "bg-white/5 border-white/10 text-gray-200 hover:bg-purple-500/20 hover:border-purple-400"
+                    ? "bg-gradient-to-r from-indigo-500 to-violet-600 border-indigo-400 text-white"
+                    : "bg-white/5 border-white/10 text-gray-200 hover:bg-violet-500/20 hover:border-violet-400"
                   } disabled:cursor-not-allowed`}
               >
 

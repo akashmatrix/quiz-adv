@@ -146,9 +146,9 @@ export default function QuestionImageControls({ question, onChange, context = ""
           type="button"
           disabled={busy}
           onClick={chooseCustom}
-          className={`rounded-xl border px-4 py-3 text-left hover:bg-purple-500/10 disabled:opacity-50 ${mode === "custom" ? "border-purple-400/50 bg-purple-500/10" : "border-purple-400/20 bg-purple-500/[0.05]"}`}
+          className={`rounded-xl border px-4 py-3 text-left hover:bg-violet-500/10 disabled:opacity-50 ${mode === "custom" ? "border-violet-400/50 bg-violet-500/10" : "border-violet-400/20 bg-violet-500/[0.05]"}`}
         >
-          <div className="font-semibold text-purple-200">✍️ Custom AI Image</div>
+          <div className="font-semibold text-violet-200">✍️ Custom AI Image</div>
           <div className="mt-1 text-xs text-gray-500">Write or edit the exact image prompt yourself.</div>
         </button>
       </div>
