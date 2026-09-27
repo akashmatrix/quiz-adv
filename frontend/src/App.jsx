@@ -98,9 +98,10 @@ function Sidebar({ collapsed, onToggle }) {
 }
 
 export default function App() {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => typeof window !== "undefined" && window.innerWidth <= 768);
   return <div className={`app-frame ${sidebarCollapsed ? "sidebar-is-collapsed" : "sidebar-is-expanded"}`}>
     <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(v => !v)}/>
+    {!sidebarCollapsed && <button className="mobile-sidebar-backdrop" onClick={() => setSidebarCollapsed(true)} aria-label="Close sidebar" />}
     <main className="app-content"><Routes>
     <Route path="/login" element={<Login/>}/><Route path="/register" element={<Register/>}/>
     <Route path="/" element={<ProtectedRoute><Dashboard/></ProtectedRoute>}/>

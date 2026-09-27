@@ -157,8 +157,103 @@ button,input,select,textarea { font:inherit; }
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 768px) {
+  /* Mobile: sidebar is a true overlay. The page always keeps 100% width. */
+  body {
+    overflow-x: hidden;
+  }
+
+  .app-content,
+  .app-frame.sidebar-is-collapsed .app-content,
+  .app-frame.sidebar-is-expanded .app-content {
+    width: 100%;
+    margin-left: 0;
+    min-width: 0;
+  }
+
+  .app-sidebar {
+    width: 0;
+    min-width: 0;
+    height: 100dvh;
+    padding: 0;
+    border-right: 0;
+    overflow: visible;
+    background: transparent;
+    box-shadow: none;
+    transition: width .28s cubic-bezier(.4,0,.2,1), box-shadow .28s ease;
+    z-index: 80;
+  }
+
+  .app-sidebar.sidebar-collapsed {
+    width: 0;
+    min-width: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .app-sidebar.sidebar-expanded {
+    width: min(280px, 84vw);
+    min-width: min(280px, 84vw);
+    padding: 18px 12px 14px;
+    background: rgba(10,13,21,.985);
+    border-right: 1px solid rgba(148,163,184,.14);
+    box-shadow: 24px 0 70px rgba(0,0,0,.42);
+    backdrop-filter: blur(24px);
+  }
+
+  /* Keep only the toggle visible while the mobile sidebar is closed. */
+  .app-sidebar.sidebar-collapsed .sidebar-brand,
+  .app-sidebar.sidebar-collapsed .sidebar-create,
+  .app-sidebar.sidebar-collapsed .sidebar-nav,
+  .app-sidebar.sidebar-collapsed .sidebar-bottom {
+    display: none;
+  }
+
   .sidebar-toggle {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    right: auto;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(148,163,184,.16);
+    border-radius: 11px;
+    background: rgba(10,13,21,.9);
+    color: #a5b4fc;
+    box-shadow: 0 10px 28px rgba(0,0,0,.28);
+    backdrop-filter: blur(14px);
+  }
+
+  .app-sidebar.sidebar-expanded .sidebar-toggle {
+    left: 12px;
+    right: auto;
+  }
+
+  .app-sidebar.sidebar-expanded .sidebar-brand {
+    padding-top: 46px;
+  }
+
+  .app-sidebar.sidebar-expanded .sidebar-toggle {
+    color: #c7d2fe;
+  }
+
+  .mobile-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    display: block;
+    border: 0;
+    padding: 0;
+    background: rgba(2,6,23,.48);
+    backdrop-filter: blur(2px);
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-sidebar-backdrop {
     display: none;
   }
 }
