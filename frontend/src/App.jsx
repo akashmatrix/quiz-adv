@@ -3,6 +3,8 @@ import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext.jsx";
 import { useTheme } from "./context/ThemeContext.jsx";
 import Login from "./pages/Login.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
+import Profile from "./pages/Profile.jsx";
 import Register from "./pages/Register.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Quiz from "./pages/Quiz.jsx";
@@ -56,18 +58,32 @@ const navItems = [
   { to: "/host-history", label: "Host History", icon: "host" },
 ];
 
+function getUserAvatarUrl(user) {
+  if (!user?.avatar) return "";
+  const number = Number(String(user.avatar).replace("avatar-", ""));
+  const style = number >= 11 ? "lorelei" : "adventurer";
+  return `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(user.avatar)}&backgroundColor=b6e3f4,c0aede,d1d4f9`;
+}
+
 function ProfilePanel({ user, logout, onClose }) {
   return <div className="profile-popover">
     <div className="profile-popover-head">
-      <div className="avatar avatar-lg">{(user?.name || "P").charAt(0).toUpperCase()}</div>
+      <div className="avatar avatar-lg overflow-hidden">
+        {user?.profileImage ? <img src={user.profileImage} alt="" className="h-full w-full object-cover" /> : user?.avatar ? <img src={getUserAvatarUrl(user)} alt="" className="h-full w-full object-cover" /> : (user?.name || "P").charAt(0).toUpperCase()}
+      </div>
       <div className="min-w-0"><p className="truncate font-bold text-white">{user?.name || "Player"}</p><p className="truncate text-xs text-slate-400">{user?.email || "Quiz account"}</p></div>
       <button onClick={onClose} className="icon-button" aria-label="Close profile"><Icon name="x" size={17}/></button>
     </div>
     <div className="profile-details">
-      <div><span>Profile</span><strong>{user?.name || "Not available"}</strong></div>
+      <div><span>Name</span><strong>{user?.name || "Not available"}</strong></div>
       <div><span>Email</span><strong>{user?.email || "Not available"}</strong></div>
       {user?._id && <div><span>Account ID</span><strong className="truncate">{user._id}</strong></div>}
     </div>
+    <Link to="/profile" onClick={onClose} className="profile-edit-link">
+      <span className="profile-edit-icon"><Icon name="user" size={16}/></span>
+      <span><strong>Edit Profile</strong><small>Photo, avatar & personal details</small></span>
+      <Icon name="chevron" size={15}/>
+    </Link>
     <button onClick={logout} className="profile-logout"><Icon name="logout" size={17}/> Log out</button>
   </div>;
 }
@@ -96,7 +112,10 @@ function Sidebar({ collapsed, onToggle }) {
       <div className="profile-wrap">
         {profileOpen && <ProfilePanel user={user} logout={logout} onClose={() => setProfileOpen(false)}/>} 
         <button className={`profile-trigger ${profileOpen ? "open" : ""}`} onClick={() => setProfileOpen(v => !v)}>
-          <div className="avatar">{(user?.name || "P").charAt(0).toUpperCase()}</div><div className="profile-trigger-text"><strong>{user?.name || "Player"}</strong><span>{user?.email || "View profile"}</span></div><span className="profile-chevron"><Icon name="chevron" size={16}/></span>
+          <div className="avatar overflow-hidden">
+            {user?.profileImage ? <img src={user.profileImage} alt="" className="h-full w-full object-cover" /> : user?.avatar ? <img src={getUserAvatarUrl(user)} alt="" className="h-full w-full object-cover" /> : (user?.name || "P").charAt(0).toUpperCase()}
+          </div>
+          <div className="profile-trigger-text"><strong>{user?.name || "Player"}</strong><span>{user?.email || "View profile"}</span></div><span className="profile-chevron"><Icon name="chevron" size={16}/></span>
         </button>
       </div>
     </div>
@@ -160,7 +179,7 @@ export default function App() {
     <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(v => !v)}/>
     {!sidebarCollapsed && <button className="mobile-sidebar-backdrop" onClick={() => setSidebarCollapsed(true)} aria-label="Close sidebar" />}
     <main className="app-content"><Routes>
-    <Route path="/login" element={<Login/>}/><Route path="/register" element={<Register/>}/>
+    <Route path="/login" element={<Login/>}/><Route path="/register" element={<Register/>}/><Route path="/forgot-password" element={<ForgotPassword/>}/><Route path="/profile" element={<ProtectedRoute><Profile/></ProtectedRoute>}/>
     <Route path="/" element={<ProtectedRoute><Dashboard/></ProtectedRoute>}/>
     <Route path="/practice" element={<Navigate to="/create-quiz" replace/>}/>
     <Route path="/result" element={<ProtectedRoute><Result/></ProtectedRoute>}/>
