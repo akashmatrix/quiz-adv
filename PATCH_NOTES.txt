@@ -1,7 +1,23 @@
-Mobile sidebar swipe gestures added.
+Phase C — Separate Participant + Host History + Multiplayer Review
 
-- Swipe right from the left screen edge to open the mobile sidebar.
-- Swipe left starting inside the open sidebar to close it.
-- Vertical scrolling is preserved.
-- Existing toggle button and backdrop close behavior remain unchanged.
-- Desktop sidebar behavior remains unchanged.
+1. Participant Quiz History now combines:
+   - Solo quiz attempts
+   - Multiplayer/live quiz attempts
+   - Each item shows whether it is Solo or Live.
+2. Multiplayer results now store question-level answer review for logged-in participants:
+   - selected answer
+   - correct answer
+   - options
+   - question image
+   - explanation
+3. Multiplayer history keeps detailed review for the newest 7 logged-in attempts; older attempts keep summary data.
+4. Added separate Host History section at /host-history.
+   - Shows every room hosted by the logged-in user.
+   - Shows room code, quiz title, status, date, question count and participant count.
+   - Expands to show participant rankings and scores.
+5. Added Room title/quizId/explanation persistence so hosted saved quizzes retain useful history information.
+6. Fixed History review routing so Solo and Multiplayer detail pages use separate endpoints and work independently.
+
+Validation:
+- Backend Node syntax checks passed for changed JS files.
+- Frontend build could not be completed in the supplied environment because the bundled node_modules is missing Rollup's optional native package @rollup/rollup-linux-x64-gnu. Run `npm install` in frontend before local build.

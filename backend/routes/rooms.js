@@ -24,7 +24,7 @@ function generateRoomCode() {
 // HOST: Create room + save questions in MongoDB
 router.post("/create", authMiddleware, async (req, res) => {
   try {
-    const { questions } = req.body;
+    const { questions, title, quizId } = req.body;
 
     if (!Array.isArray(questions) || questions.length === 0) {
       return res.status(400).json({
@@ -79,6 +79,7 @@ router.post("/create", authMiddleware, async (req, res) => {
         options: q.options.map((option) => option.trim()),
         correctAnswerIndex: q.correctAnswerIndex,
         difficulty: q.difficulty || "medium",
+        explanation: q.explanation || "",
       }))
     );
 
@@ -87,6 +88,8 @@ router.post("/create", authMiddleware, async (req, res) => {
       roomCode,
       host: req.user.id,
       hostName: req.user.name,
+      title: String(title || "Hosted Quiz").trim(),
+      quizId: quizId || undefined,
       questions,
       maxParticipants: 150,
     });
@@ -126,6 +129,39 @@ router.get("/my-results", authMiddleware, async (req, res) => {
     res.status(500).json({
       message: "Server error fetching live quiz results",
     });
+  }
+});
+
+// HOST: hosted quiz history
+router.get("/host-history", authMiddleware, async (req, res) => {
+  try {
+    const rooms = await Room.find({ host: req.user.id })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+
+    const roomIds = rooms.map((room) => room._id);
+    const results = roomIds.length
+      ? await RoomResult.find({ room: { $in: roomIds } })
+          .sort({ score: -1, correctAnswers: -1, createdAt: 1 })
+          .lean()
+      : [];
+
+    const byRoom = new Map();
+    for (const result of results) {
+      const key = result.room.toString();
+      if (!byRoom.has(key)) byRoom.set(key, []);
+      byRoom.get(key).push(result);
+    }
+
+    res.json(rooms.map((room) => ({
+      ...room,
+      participants: byRoom.get(room._id.toString()) || [],
+      participantCount: (byRoom.get(room._id.toString()) || []).length,
+    })));
+  } catch (err) {
+    console.error("Host history error:", err);
+    res.status(500).json({ message: "Server error fetching host history" });
   }
 });
 

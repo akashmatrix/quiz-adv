@@ -1,0 +1,14 @@
+AI Quiz Variety Update
+
+What changed:
+1. AI quiz generation now looks at the authenticated user's previously SAVED AI quizzes with the same topic and difficulty.
+2. Previous question text is sent to Gemini as an exclusion list.
+3. The prompt explicitly asks for new concepts and mixed question styles: conceptual, code/output, scenario/application, debugging, comparison, reasoning, best-practice/design, and case-study style.
+4. A local similarity check rejects exact/near-duplicate questions against previous saved questions and within the newly generated quiz.
+5. If duplicates are detected, the server automatically asks Gemini for one regeneration with stronger anti-paraphrase instructions.
+6. If the second generation still contains near-duplicates, the API asks the user to generate again instead of returning a repetitive quiz.
+
+Important:
+- Only the user's own saved AI quizzes are used for variety memory.
+- AI generation itself is still NOT auto-saved; the user can review/edit/save it as before.
+- The current duplicate check is text-similarity based, so it reduces repetition but cannot guarantee perfect semantic novelty.

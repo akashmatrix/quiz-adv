@@ -15,6 +15,7 @@ const RoomQuestionSchema = new mongoose.Schema(
     imageUrl: { type: String, default: "", trim: true },
     // Host decides timer for each question - between 2 and 120 seconds
     timeLimit: { type: Number, required: true, min: 2, max: 120, default: 20 },
+    explanation: { type: String, default: "" },
   },
   { _id: false }
 );
@@ -24,6 +25,8 @@ const RoomSchema = new mongoose.Schema(
     roomCode: { type: String, required: true, unique: true, uppercase: true },
     host: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     hostName: { type: String, required: true },
+    title: { type: String, default: "Hosted Quiz" },
+    quizId: { type: mongoose.Schema.Types.ObjectId, ref: "Quiz", required: false },
     questions: {
       type: [RoomQuestionSchema],
       required: true,

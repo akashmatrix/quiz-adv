@@ -13,6 +13,7 @@ const QuestionSchema = new mongoose.Schema(
       required: true,
     },
     correctAnswerIndex: { type: Number, required: true, min: 0, max: 3 },
+    explanation: { type: String, default: "" },
     difficulty: { type: String, enum: ["easy", "medium", "hard"], default: "medium" },
   },
   { timestamps: true }

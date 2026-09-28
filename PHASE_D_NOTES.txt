@@ -1,0 +1,17 @@
+PHASE D - FINAL LEADERBOARD UPGRADE
+
+Implemented on top of Phase C history build.
+
+1. Live question leaderboard now shows ALL participants, not only top 3.
+2. Leaderboard is vertically scrollable when many participants are present.
+3. Top 5 receive polished visual treatment with podium-style rank badges.
+4. Current participant is highlighted with a "You" badge.
+5. Rank changes animate smoothly between the previous and new rank positions.
+6. Every participant row keeps a stable participantId key so React does not randomly remount rows.
+7. Final leaderboard also shows ALL participants in rank order with the same polished scrollable UI.
+8. Existing Socket.IO game flow and 5-second leaderboard-to-next-question behavior are preserved.
+9. No new frontend dependency was added; animation uses React + CSS transitions.
+
+Validation:
+- backend/socket/gameManager.js syntax check: passed.
+- Frontend build could not be run in this extracted environment because node_modules/.bin/vite is not present. Run `npm install` then `npm run build` in frontend locally.

@@ -36,8 +36,18 @@ export default function RoomLobby() {
       setReady(true);
     }
 
-    function handleParticipantsUpdate(names) {
-      setParticipants(names);
+    function handleParticipantsUpdate(payload) {
+      // New backend sends { participants, count }; keep compatibility with
+      // the old plain-name-array payload as well.
+      const names = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.participants)
+          ? payload.participants.map((p) =>
+              typeof p === "string" ? p : p.name
+            )
+          : [];
+
+      setParticipants(names.filter(Boolean));
     }
 
     function handleErrorMsg(msg) {
@@ -65,42 +75,71 @@ export default function RoomLobby() {
     socket.on("quiz:question", handleQuestion);
     socket.on("room:hostLeft", handleHostLeft);
 
-    if (isHost) {
+    const handleSocketConnect = () => {
       const token = localStorage.getItem("token");
-      socket.emit("host:enterRoom", { roomCode, token });
-    } else {
+
+      if (isHost) {
+        socket.emit("host:enterRoom", { roomCode, token });
+        // Ask the server for the authoritative lobby state after joining.
+        setTimeout(() => {
+          if (socket.connected) {
+            socket.emit("room:requestState", { roomCode });
+          }
+        }, 150);
+      } else {
+        const participantId = localStorage.getItem(
+          `quizneon-participant-${roomCode}`
+        );
+        socket.emit("participant:joinRoom", {
+          roomCode,
+          participantName,
+          participantId,
+          token,
+        });
+      }
+    };
+
+    socket.on("connect", handleSocketConnect);
+
+    if (!isHost) {
       let participantId = localStorage.getItem(
         `quizneon-participant-${roomCode}`
       );
 
       if (!participantId) {
         participantId = crypto.randomUUID();
-
         localStorage.setItem(
           `quizneon-participant-${roomCode}`,
           participantId
         );
       }
 
-      // Save participant name for refresh/reconnect
       localStorage.setItem(
         `quizneon-name-${roomCode}`,
         participantName
       );
+    }
 
-      const token = localStorage.getItem("token");
-
-      socket.emit("participant:joinRoom", {
-        roomCode,
-        participantName,
-        participantId,
-        token,
-      });
+    if (!socket.connected) {
+      socket.connect();
+    } else {
+      handleSocketConnect();
     }
     localStorage.setItem(
       `quizneon-name-${roomCode}`,
       participantName
     );
+
+    // Keep the host lobby synchronized even if a socket event was missed
+    // during a reconnect/network transition. This is intentionally short and
+    // only runs while the lobby is open.
+    const lobbySyncTimer = isHost
+      ? setInterval(() => {
+          if (socket.connected) {
+            socket.emit("room:requestState", { roomCode });
+          }
+        }, 1000)
+      : null;
 
     return () => {
       socket.off("room:hostReady", handleHostReady);
@@ -109,6 +148,8 @@ export default function RoomLobby() {
       socket.off("error:message", handleErrorMsg);
       socket.off("quiz:question", handleQuestion);
       socket.off("room:hostLeft", handleHostLeft);
+      socket.off("connect", handleSocketConnect);
+      if (lobbySyncTimer) clearInterval(lobbySyncTimer);
     };
 
     // eslint-disable-next-line react-hooks/exhaustive-deps

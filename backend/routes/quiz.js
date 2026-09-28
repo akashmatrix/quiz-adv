@@ -6,6 +6,21 @@ const authMiddleware = require("../middleware/auth");
 
 const router = express.Router();
 
+async function trimDetailedHistory(userId) {
+  const results = await Result.find({ user: userId })
+    .sort({ createdAt: -1, _id: -1 })
+    .select("_id")
+    .lean();
+
+  const olderIds = results.slice(7).map((item) => item._id);
+  if (!olderIds.length) return;
+
+  await Result.updateMany(
+    { _id: { $in: olderIds }, user: userId },
+    { $set: { breakdown: [], detailsRetained: false } }
+  );
+}
+
 // =====================================================
 // SUBMIT SOLO QUIZ
 // =====================================================
@@ -50,8 +65,10 @@ router.post("/submit", authMiddleware, async (req, res) => {
       breakdown.push({
         questionId: question._id,
         questionText: question.questionText,
+        options: question.options,
         selectedIndex: ans.selectedIndex,
         correctAnswerIndex: question.correctAnswerIndex,
+        explanation: question.explanation || "",
         isCorrect,
       });
     });
@@ -59,9 +76,17 @@ router.post("/submit", authMiddleware, async (req, res) => {
     const result = await Result.create({
       user: req.user.id,
       score,
+      points: score,
       totalQuestions: answers.length,
       category: category || "General",
+      quizTitle: String(req.body.quizTitle || category || "General Quiz").trim(),
+      quizId: req.body.quizId || undefined,
+      source: req.body.quizId ? "saved-quiz" : "solo",
+      detailsRetained: true,
+      breakdown,
     });
+
+    await trimDetailedHistory(req.user.id);
 
     res.json({
       message: "Quiz submitted successfully",

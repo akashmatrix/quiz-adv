@@ -1,6 +1,160 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import socket from "../socket.js";
+
+
+function playerName(player) {
+  return player?.name || player?.participantName || "Unknown Player";
+}
+
+function initials(name = "U") {
+  return name.trim().split(/\s+/).slice(0, 2).map((x) => x[0]).join("").toUpperCase();
+}
+
+function AnimatedLeaderboard({ players = [], previousRanks = {}, participantId, finalView = false, displayDurationMs = 6500 }) {
+  const [ready, setReady] = useState(false);
+  const [moveBadges, setMoveBadges] = useState({});
+  const [secondsLeft, setSecondsLeft] = useState(Math.ceil(displayDurationMs / 1000));
+  const rowHeight = 78;
+
+  useEffect(() => {
+    setReady(false);
+    const frame = requestAnimationFrame(() => setReady(true));
+    return () => cancelAnimationFrame(frame);
+  }, [players]);
+
+  useEffect(() => {
+    setSecondsLeft(Math.ceil(displayDurationMs / 1000));
+    if (finalView) return undefined;
+
+    const startedAt = Date.now();
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      const remaining = Math.max(0, Math.ceil((displayDurationMs - elapsed) / 1000));
+      setSecondsLeft(remaining);
+    }, 250);
+
+    return () => clearInterval(timer);
+  }, [displayDurationMs, players, finalView]);
+
+  useEffect(() => {
+    if (!players.length || finalView) return;
+
+    const nextBadges = {};
+    players.forEach((p, index) => {
+      const id = p.participantId || p.name || `player-${index}`;
+      const newRank = index + 1;
+      const oldRank = previousRanks[id];
+
+      if (oldRank && oldRank !== newRank) {
+        nextBadges[id] = {
+          direction: oldRank > newRank ? "up" : "down",
+          from: oldRank,
+          to: newRank,
+        };
+      }
+    });
+
+    setMoveBadges(nextBadges);
+    if (!Object.keys(nextBadges).length) return undefined;
+
+    const timeout = setTimeout(() => setMoveBadges({}), 1800);
+    return () => clearTimeout(timeout);
+  }, [players, previousRanks, finalView]);
+
+  const ranked = useMemo(() => players.map((p, index) => ({ ...p, __rank: index + 1 })), [players]);
+
+  if (!ranked.length) {
+    return <div className="rounded-2xl border border-white/10 bg-white/[.03] p-8 text-center text-sm text-gray-500">No participants yet.</div>;
+  }
+
+  return (
+    <div className="relative">
+      {!finalView && (
+        <div className="mb-4 flex items-center justify-between rounded-2xl border border-violet-400/15 bg-violet-500/[.06] px-4 py-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[.18em] text-violet-300">Rank transition</p>
+            <p className="mt-1 text-xs text-gray-500">Players are moving to their new positions</p>
+          </div>
+          <div className="min-w-[58px] text-right">
+            <p className="text-xl font-black tabular-nums text-white">{secondsLeft}s</p>
+            <p className="text-[9px] uppercase tracking-widest text-gray-600">next question</p>
+          </div>
+        </div>
+      )}
+
+      <div className={`${finalView ? "max-h-[62vh]" : "max-h-[55vh]"} overflow-y-auto pr-1`} style={{ scrollbarWidth: "thin" }}>
+        <div className="space-y-2">
+          {ranked.map((p) => {
+            const rank = p.__rank;
+            const oldRank = previousRanks[p.participantId];
+            const offset = oldRank ? (oldRank - rank) * rowHeight : 0;
+            const isMe = participantId && p.participantId === participantId;
+            const topFive = rank <= 5;
+            const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : null;
+            const move = moveBadges[p.participantId];
+
+            return (
+              <div
+                key={p.participantId || p.name}
+                className="relative"
+              >
+                {move && (
+                  <div
+                    className={`rank-move-pop absolute right-16 top-1/2 z-20 -translate-y-1/2 rounded-full border px-3 py-1.5 text-[11px] font-black shadow-2xl backdrop-blur-md ${move.direction === "up" ? "border-emerald-300/30 bg-emerald-400/15 text-emerald-300" : "border-rose-300/30 bg-rose-400/15 text-rose-300"}`}
+                  >
+                    {move.direction === "up" ? "↑" : "↓"} #{move.from} → #{move.to}
+                  </div>
+                )}
+
+                <div
+                  className={`group flex min-h-[68px] items-center gap-3 rounded-2xl border px-3 py-3 md:px-4 ${isMe ? "border-violet-400/50 bg-violet-500/10" : topFive ? "border-white/10 bg-white/[.055]" : "border-white/[.06] bg-white/[.025]"}`}
+                  style={{
+                    transform: ready ? "translateY(0)" : `translateY(${offset}px)`,
+                    transition: "transform 1450ms cubic-bezier(.16,1,.3,1), background-color 450ms ease, border-color 450ms ease, box-shadow 700ms ease",
+                    boxShadow: move ? (move.direction === "up" ? "0 0 34px rgba(52, 211, 153, .16)" : "0 0 34px rgba(251, 113, 133, .12)") : undefined,
+                  }}
+                >
+                  <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl text-sm font-black ${rank === 1 ? "bg-yellow-400/15 text-yellow-300" : rank === 2 ? "bg-slate-300/15 text-slate-200" : rank === 3 ? "bg-orange-400/15 text-orange-300" : "bg-black/20 text-gray-400"}`}>
+                    {medal || `#${rank}`}
+                  </div>
+
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-xs font-black text-white shadow-lg shadow-indigo-900/20">
+                    {initials(playerName(p))}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate font-bold text-slate-100">{playerName(p)}</p>
+                      {isMe && <span className="shrink-0 rounded-full bg-violet-400/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-300">You</span>}
+                    </div>
+                    <p className="mt-0.5 text-xs text-gray-500">{p.correctCount ?? p.correctAnswers ?? 0} correct</p>
+                  </div>
+
+                  <div className="text-right">
+                    <p className={`font-black ${topFive ? "text-violet-300" : "text-slate-300"}`}>{p.score ?? 0}</p>
+                    <p className="text-[10px] uppercase tracking-wider text-gray-600">points</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes rankMovePop {
+          0% { opacity: 0; transform: translateY(-50%) scale(.55); filter: blur(3px); }
+          18% { opacity: 1; transform: translateY(-50%) scale(1.12); filter: blur(0); }
+          38% { transform: translateY(-50%) scale(1); }
+          72% { opacity: 1; transform: translateY(-50%) scale(1); }
+          100% { opacity: 0; transform: translateY(-68%) scale(.92); }
+        }
+        .rank-move-pop { animation: rankMovePop 1800ms cubic-bezier(.16,1,.3,1) both; }
+      `}</style>
+    </div>
+  );
+}
 
 export default function LiveQuiz() {
   const { roomCode } = useParams();
@@ -24,6 +178,9 @@ export default function LiveQuiz() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [correctAnswerIndex, setCorrectAnswerIndex] = useState(null);
   const [finalLeaderboard, setFinalLeaderboard] = useState([]);
+  const [previousRanks, setPreviousRanks] = useState({});
+  const [leaderboardDurationMs, setLeaderboardDurationMs] = useState(6500);
+  const leaderboardRef = useRef([]);
 
   // =========================================================
   // PARTICIPANT ID + NAME
@@ -50,8 +207,14 @@ export default function LiveQuiz() {
     }
 
     function handleLeaderboard(data) {
-      setLeaderboard(data.leaderboard || []);
+      const incoming = data.leaderboard || [];
+      const oldRanks = {};
+      leaderboardRef.current.forEach((p, index) => { oldRanks[p.participantId] = index + 1; });
+      setPreviousRanks(oldRanks);
+      leaderboardRef.current = incoming;
+      setLeaderboard(incoming);
       setCorrectAnswerIndex(data.correctAnswerIndex);
+      setLeaderboardDurationMs(Number(data.displayDurationMs) || 6500);
       setPhase("leaderboard");
     }
 
@@ -187,157 +350,15 @@ export default function LiveQuiz() {
           </div>
 
           {/* =================================================
-              TOP 3
+              COMPLETE RANKINGS
           ================================================= */}
 
-          <div className="space-y-3">
-
-            {topThree.map((p, index) => {
-              const rank = index + 1;
-
-              const isMe =
-                !isHost &&
-                participantId &&
-                p.participantId === participantId;
-
-              return (
-                <div
-                  key={`${p.participantId || p.name}-${index}`}
-                  className={`flex items-center justify-between gap-4 px-4 py-4 rounded-2xl border transition hover:scale-[1.01] ${rank === 1
-                      ? "bg-yellow-500/10 border-yellow-400/40"
-                      : rank === 2
-                        ? "bg-gray-400/10 border-gray-400/30"
-                        : "bg-orange-500/10 border-orange-400/30"
-                    }`}
-                >
-
-                  {/* Player */}
-                  <div className="flex items-center gap-3 min-w-0">
-
-                    <div className="text-2xl w-9 text-center">
-                      {rank === 1
-                        ? "🥇"
-                        : rank === 2
-                          ? "🥈"
-                          : "🥉"}
-                    </div>
-
-                    <div className="min-w-0">
-
-                      <p className="font-bold truncate">
-                        #{rank} {p.name}
-
-                        {isMe && (
-                          <span className="ml-2 text-xs text-indigo-300">
-                            YOU
-                          </span>
-                        )}
-                      </p>
-
-                      <p className="text-xs text-gray-400 mt-1">
-                        {p.correctCount ?? 0} correct answers
-                      </p>
-
-                    </div>
-                  </div>
-
-                  {/* Score */}
-                  <div className="text-right shrink-0">
-
-                    <p className="font-extrabold text-indigo-400">
-                      {p.score ?? 0} pts
-                    </p>
-
-                  </div>
-
-                </div>
-              );
-            })}
-
-          </div>
-
-          {/* Separator */}
-          {sortedLeaderboard.length > 3 && (
-            <div className="my-6 text-center text-gray-500 text-xl tracking-[0.4em]">
-              •••
-            </div>
-          )}
-
-          {/* =================================================
-              YOUR RESULT
-          ================================================= */}
-
-          {myResult && myRank > 3 && (
-            <div className="mt-4 p-6 rounded-2xl border border-indigo-400/30 bg-gradient-to-r from-indigo-500/10 to-violet-500/10">
-
-              <p className="text-xs uppercase tracking-[0.2em] text-indigo-300 font-bold text-center">
-                Your Result
-              </p>
-
-              <div className="mt-5 text-center">
-
-                <p className="text-3xl font-extrabold">
-                  Rank #{myRank}
-                </p>
-
-                <p className="mt-3 text-2xl font-extrabold text-indigo-400">
-                  {myResult.score ?? 0} pts
-                </p>
-
-                <p className="mt-2 text-sm text-gray-400">
-                  {myResult.correctCount ?? 0} correct answers
-                </p>
-
-              </div>
-
-            </div>
-          )}
-
-          {/* =================================================
-              TOP 3 USER MESSAGE
-          ================================================= */}
-
-          {!isHost && myResult && myRank <= 3 && (
-            <div className="mt-5 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-center">
-
-              <p className="text-green-300 font-semibold">
-                🎉 Congratulations!
-              </p>
-
-              <p className="text-sm text-gray-400 mt-1">
-                You finished in the Top 3.
-              </p>
-
-            </div>
-          )}
-
-          {/* =================================================
-              PLAYER NOT FOUND
-          ================================================= */}
-
-          {!isHost && !myResult && (
-            <div className="mt-5 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-center">
-
-              <p className="text-yellow-300 text-sm">
-                Your personal result could not be found.
-              </p>
-
-            </div>
-          )}
-
-          {/* =================================================
-              HOST MESSAGE
-          ================================================= */}
-
-          {isHost && (
-            <div className="mt-5 p-4 rounded-xl bg-violet-500/10 border border-violet-500/20 text-center">
-
-              <p className="text-violet-300 text-sm">
-                👑 You are the host of this quiz.
-              </p>
-
-            </div>
-          )}
+          <AnimatedLeaderboard
+            players={sortedLeaderboard}
+            previousRanks={{}}
+            participantId={participantId}
+            finalView
+          />
 
           {/* =================================================
               BACK HOME
@@ -361,67 +382,31 @@ export default function LiveQuiz() {
 
   if (phase === "leaderboard") {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-[#080014] text-white">
+      <div className="min-h-screen px-4 py-8 bg-[#080014] text-white">
+        <div className="mx-auto w-full max-w-3xl">
+          <div className="relative overflow-hidden rounded-3xl border border-violet-500/30 bg-white/5 p-5 md:p-8 backdrop-blur-xl shadow-2xl">
+            <div className="pointer-events-none absolute -top-24 left-1/2 h-48 w-48 -translate-x-1/2 rounded-full bg-violet-600/20 blur-3xl" />
 
-        <div className="relative w-full max-w-xl p-8 rounded-3xl border border-violet-500/30 bg-white/5 backdrop-blur-xl shadow-2xl">
-
-          <div className="text-center mb-8">
-
-            <div className="text-4xl mb-3">
-              📊
+            <div className="relative mb-6 text-center">
+              <div className="text-4xl mb-2">📊</div>
+              <h2 className="text-2xl md:text-3xl font-extrabold">Live Leaderboard</h2>
+              <p className="mt-2 text-sm text-gray-400">
+                Question {leaderboard.length ? "results" : "results"} · rankings update after every question
+              </p>
             </div>
 
-            <h2 className="text-3xl font-extrabold">
-              Leaderboard
-            </h2>
+            <AnimatedLeaderboard
+              players={leaderboard}
+              previousRanks={previousRanks}
+              participantId={participantId}
+              displayDurationMs={leaderboardDurationMs}
+            />
 
-            <p className="text-sm text-gray-400 mt-2">
+            <div className="mt-5 flex items-center justify-center gap-2 text-xs text-gray-500">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-400" />
               Next question will start automatically...
-            </p>
-
+            </div>
           </div>
-
-          <div className="space-y-3">
-
-            {leaderboard.map((p, idx) => (
-              <div
-                key={p.participantId || `${p.name}-${idx}`}
-                className="flex justify-between items-center px-4 py-4 rounded-xl bg-white/5 border border-white/10"
-              >
-
-                <div>
-
-                  <p className="font-semibold">
-                    {idx + 1}. {p.name}
-                  </p>
-
-                  {p.lastCorrect === true && (
-                    <p className="text-sm text-green-400 mt-1">
-                      ✅ +{p.lastPoints}
-                    </p>
-                  )}
-
-                  {p.lastCorrect === false && (
-                    <p className="text-sm text-red-400 mt-1">
-                      ❌ Incorrect
-                    </p>
-                  )}
-
-                </div>
-
-                <span className="font-bold text-violet-400">
-                  {p.score ?? 0} pts
-                </span>
-
-              </div>
-            ))}
-
-          </div>
-
-          <div className="mt-6 text-center text-sm text-gray-500">
-            Keep going! 🚀
-          </div>
-
         </div>
       </div>
     );

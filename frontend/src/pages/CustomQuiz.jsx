@@ -50,11 +50,14 @@ export default function CustomQuiz() {
     try {
       const payload = {
         category: quiz.topic || "General",
+        quizTitle: quiz.title || quiz.topic || "General Quiz",
+        quizId: quiz._id || quiz.id || undefined,
         answers: quiz.questions.map((q, index) => ({
           questionText: q.questionText,
           imageUrl: q.imageUrl || "",
           options: q.options,
           correctAnswerIndex: q.correctAnswerIndex,
+          explanation: q.explanation || "",
           selectedIndex: answers[index] ?? -1,
         })),
       };

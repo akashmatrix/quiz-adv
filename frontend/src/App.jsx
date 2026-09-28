@@ -19,6 +19,8 @@ import CustomQuiz from "./pages/CustomQuiz.jsx";
 import DocumentQuiz from "./pages/DocumentQuiz.jsx";
 import MyQuizzes from "./pages/MyQuizzes.jsx";
 import AIQuiz from "./pages/AIQuiz.jsx";
+import History from "./pages/History.jsx";
+import HostHistory from "./pages/HostHistory.jsx";
 
 const Icon = ({ name, size = 19 }) => {
   const common = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": true };
@@ -27,6 +29,8 @@ const Icon = ({ name, size = 19 }) => {
     create: <><path d="M12 5v14"/><path d="M5 12h14"/><rect x="3" y="3" width="18" height="18" rx="5"/></>,
     library: <><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></>,
     analytics: <><path d="M4 19V5"/><path d="M4 19h16"/><path d="m7 15 3-4 3 2 5-6"/></>,
+    history: <><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></>,
+    host: <><path d="M4 21V5"/><path d="M4 5h11l-2 4 2 4H4"/><path d="M18 14v7"/><path d="M15 21h6"/></>,
     sun: <><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></>,
     moon: <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8Z"/>,
     logout: <><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M21 19V5a2 2 0 0 0-2-2h-6"/></>,
@@ -48,6 +52,8 @@ const navItems = [
   { to: "/join-room", label: "Join Room", icon: "join" },
   { to: "/my-quizzes", label: "My Quizzes", icon: "library" },
   { to: "/analytics", label: "Analytics", icon: "analytics" },
+  { to: "/history", label: "Quiz History", icon: "history" },
+  { to: "/host-history", label: "Host History", icon: "host" },
 ];
 
 function ProfilePanel({ user, logout, onClose }) {
@@ -159,7 +165,9 @@ export default function App() {
     <Route path="/practice" element={<Navigate to="/create-quiz" replace/>}/>
     <Route path="/result" element={<ProtectedRoute><Result/></ProtectedRoute>}/>
     <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard/></ProtectedRoute>}/>
-    <Route path="/analytics" element={<ProtectedRoute><Analytics/></ProtectedRoute>}/>
+    <Route path="/analytics" element={<ProtectedRoute><Analytics/></ProtectedRoute>}/><Route path="/host-history" element={<ProtectedRoute><HostHistory/></ProtectedRoute>}/>
+    <Route path="/history" element={<ProtectedRoute><History/></ProtectedRoute>}/>
+    <Route path="/history/:kind/:id" element={<ProtectedRoute><History/></ProtectedRoute>}/><Route path="/history/:id" element={<ProtectedRoute><History/></ProtectedRoute>}/>
     <Route path="/create-quiz" element={<ProtectedRoute><CreateQuizHome/></ProtectedRoute>}/>
     <Route path="/create-quiz/manual" element={<ProtectedRoute><CreateQuiz/></ProtectedRoute>}/>
     <Route path="/create-quiz/ai" element={<ProtectedRoute><AIQuiz/></ProtectedRoute>}/>

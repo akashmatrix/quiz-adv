@@ -5,7 +5,7 @@ const RoomResult = require("../models/RoomResult");
 const games = {};
 
 const MAX_PARTICIPANTS = 150;
-const LEADERBOARD_DISPLAY_MS = 5000;
+const LEADERBOARD_DISPLAY_MS = 6500;
 const GAME_CLEANUP_MS = 10 * 60 * 1000;
 
 
@@ -39,6 +39,38 @@ function clearGameTimer(game) {
     clearTimeout(game.timer);
     game.timer = null;
   }
+}
+
+// Keep every lobby screen (especially the host) in sync with the
+// authoritative participant list stored in the in-memory game.
+function emitParticipantsUpdate(io, roomCode, game) {
+  if (!game) return;
+
+  const participants = Object.values(game.participants).map((p) => ({
+    participantId: p.participantId,
+    name: p.name,
+    connected: p.connected !== false,
+  }));
+
+  io.to(roomCode).emit("room:participantsUpdate", {
+    participants,
+    count: participants.length,
+  });
+}
+
+function sendLobbyStateToSocket(targetSocket, game, roomCode) {
+  if (!targetSocket || !game) return;
+
+  const participants = Object.values(game.participants).map((p) => ({
+    participantId: p.participantId,
+    name: p.name,
+    connected: p.connected !== false,
+  }));
+
+  targetSocket.emit("room:participantsUpdate", {
+    participants,
+    count: participants.length,
+  });
 }
 
 
@@ -97,6 +129,7 @@ function endQuestion(io, roomCode) {
     correctAnswerIndex: q.correctAnswerIndex,
     questionNumber: game.currentIndex + 1,
     totalQuestions: game.questions.length,
+    displayDurationMs: LEADERBOARD_DISPLAY_MS,
   });
 
   game.timer = setTimeout(() => {
@@ -146,6 +179,21 @@ async function finishQuiz(io, roomCode) {
 
     const resultDocs = leaderboard.map((p, idx) => {
       const participant = game.participants[p.participantId];
+      const answers = participant?.answers || [];
+
+      const breakdown = game.questions.map((q, questionIndex) => {
+        const answer = answers[questionIndex];
+        const selectedIndex = Number.isInteger(answer?.selectedIndex) ? answer.selectedIndex : -1;
+        return {
+          questionText: q.questionText,
+          options: q.options,
+          selectedIndex,
+          correctAnswerIndex: q.correctAnswerIndex,
+          imageUrl: q.imageUrl || "",
+          explanation: q.explanation || "",
+          isCorrect: selectedIndex === q.correctAnswerIndex,
+        };
+      });
 
       return {
         room: game.roomId,
@@ -153,16 +201,31 @@ async function finishQuiz(io, roomCode) {
         user: participant?.userId || undefined,
         participantName: p.name,
         score: p.score,
-        correctAnswers: participant
-          ? participant.correctCount
-          : 0,
+        correctAnswers: participant ? participant.correctCount : 0,
         totalQuestions: game.questions.length,
         rank: idx + 1,
+        detailsRetained: true,
+        breakdown,
       };
     });
 
     if (resultDocs.length > 0) {
       await RoomResult.insertMany(resultDocs);
+
+      const userIds = [...new Set(resultDocs.map((doc) => doc.user?.toString()).filter(Boolean))];
+      for (const userId of userIds) {
+        const history = await RoomResult.find({ user: userId })
+          .sort({ createdAt: -1, _id: -1 })
+          .select("_id")
+          .lean();
+        const olderIds = history.slice(7).map((item) => item._id);
+        if (olderIds.length) {
+          await RoomResult.updateMany(
+            { _id: { $in: olderIds }, user: userId },
+            { $set: { breakdown: [], detailsRetained: false } }
+          );
+        }
+      }
     }
 
   } catch (err) {
@@ -244,16 +307,25 @@ function registerSocketHandlers(io) {
         socket.data.roomCode = code;
         socket.data.isHost = true;
 
+        const currentParticipants = Object.values(
+          games[code].participants
+        ).map((p) => ({
+          participantId: p.participantId,
+          name: p.name,
+          connected: p.connected !== false,
+        }));
+
         socket.emit("room:hostReady", {
           roomCode: code,
-
-          participants: Object.values(
-            games[code].participants
-          ).map((p) => p.name),
-
-          totalQuestions:
-            games[code].questions.length,
+          participants: currentParticipants,
+          totalQuestions: games[code].questions.length,
         });
+
+        // Send the authoritative lobby state directly to the host too.
+        // This avoids relying only on a room broadcast when the host has just
+        // joined/reconnected.
+        sendLobbyStateToSocket(socket, games[code], code);
+        emitParticipantsUpdate(io, code, games[code]);
 
       } catch (err) {
 
@@ -370,6 +442,8 @@ function registerSocketHandlers(io) {
               existingParticipant.userId = userId;
             }
 
+            if (!Array.isArray(existingParticipant.answers)) existingParticipant.answers = [];
+
             socket.join(code);
 
             socket.data.roomCode = code;
@@ -438,7 +512,7 @@ function registerSocketHandlers(io) {
             lastCorrect: null,
 
             lastPoints: 0,
-
+            answers: [],
             connected: true,
           };
 
@@ -461,10 +535,14 @@ function registerSocketHandlers(io) {
               game.questions.length,
           });
 
-          io.to(code).emit(
-            "room:participantsUpdate",
-            participantNames
-          );
+          // Send the update directly to the host first, then broadcast to
+          // everyone in the room. Direct delivery fixes the common case where
+          // a host lobby was rendered before the participant joined.
+          if (game.hostSocketId) {
+            const hostSocket = io.sockets.sockets.get(game.hostSocketId);
+            sendLobbyStateToSocket(hostSocket, game, code);
+          }
+          emitParticipantsUpdate(io, code, game);
         } catch (err) {
           console.error(err);
 
@@ -476,6 +554,26 @@ function registerSocketHandlers(io) {
       }
     );
 
+
+
+    // ================= LOBBY STATE SYNC =================
+
+    socket.on("room:requestState", ({ roomCode }) => {
+      const code = (roomCode || "").toUpperCase().trim();
+      const game = games[code];
+
+      if (!game) {
+        return socket.emit("error:message", "Room not found");
+      }
+
+      sendLobbyStateToSocket(socket, game, code);
+
+      socket.emit("room:state", {
+        roomCode: code,
+        status: game.status,
+        totalQuestions: game.questions.length,
+      });
+    });
 
 
     // ================= HOST START QUIZ =================
@@ -497,10 +595,15 @@ function registerSocketHandlers(io) {
           );
         }
 
-        if (socket.id !== game.hostSocketId) {
+        const isCurrentHost =
+          socket.id === game.hostSocketId &&
+          socket.data.isHost === true &&
+          socket.data.roomCode === code;
+
+        if (!isCurrentHost) {
           return socket.emit(
             "error:message",
-            "Only the host can start the quiz"
+            "Only the host can start the quiz. Please reconnect to the room."
           );
         }
 
@@ -590,6 +693,13 @@ function registerSocketHandlers(io) {
 
         participant.score += points;
 
+        if (!Array.isArray(participant.answers)) participant.answers = [];
+        participant.answers[game.currentIndex] = {
+          selectedIndex: Number(selectedIndex),
+          correctAnswerIndex: q.correctAnswerIndex,
+          isCorrect: correct,
+        };
+
         participant.hasAnsweredThisRound = true;
 
         participant.lastCorrect = correct;
@@ -657,10 +767,10 @@ function registerSocketHandlers(io) {
 
         if (participant) {
 
-          // Do NOT delete participant.
-          // Preserve score and identity after refresh.
-
+          // Do NOT delete participant. Preserve score and identity after
+          // refresh/reconnect, but immediately update the lobby UI.
           participant.connected = false;
+          emitParticipantsUpdate(io, roomCode, game);
 
         }
 

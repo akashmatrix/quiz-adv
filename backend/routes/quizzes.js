@@ -2,6 +2,7 @@ const express = require("express");
 const Quiz = require("../models/Quiz");
 const Room = require("../models/Room");
 const Result = require("../models/Result");
+const RoomResult = require("../models/RoomResult");
 const authMiddleware = require("../middleware/auth");
 const { GoogleGenAI, createUserContent, createPartFromUri } = require("@google/genai");
 const fs = require("fs");
@@ -9,6 +10,28 @@ const os = require("os");
 const path = require("path");
 
 const router = express.Router();
+
+// Keep complete question-by-question review data for the newest 7 attempts.
+// Older attempts remain as lightweight history records with score/rank/points.
+async function trimDetailedHistory(userId) {
+  const results = await Result.find({ user: userId })
+    .sort({ createdAt: -1, _id: -1 })
+    .select("_id")
+    .lean();
+
+  const olderIds = results.slice(7).map((item) => item._id);
+  if (!olderIds.length) return;
+
+  await Result.updateMany(
+    { _id: { $in: olderIds }, user: userId },
+    {
+      $set: {
+        breakdown: [],
+        detailsRetained: false,
+      },
+    }
+  );
+}
 
 const VALID_DIFFICULTIES = ["easy", "medium", "hard"];
 const VALID_METHODS = ["manual", "ai", "pdf", "ppt"];
@@ -90,7 +113,7 @@ router.get("/", authMiddleware, async (req, res) => {
   }
 });
 
-// GENERATE a quiz with Gemini (nothing is saved automatically)
+// Generate a quiz with Gemini (nothing is saved automatically)
 router.post("/ai/generate", authMiddleware, async (req, res) => {
   try {
     const { topic, difficulty, questionCount, timePerQuestion, instructions } = req.body;
@@ -104,30 +127,128 @@ router.post("/ai/generate", authMiddleware, async (req, res) => {
     if (!cleanTopic) {
       return res.status(400).json({ message: "Topic is required" });
     }
-
     if (!VALID_DIFFICULTIES.includes(cleanDifficulty)) {
       return res.status(400).json({ message: "Invalid difficulty" });
     }
-
     if (!Number.isInteger(count) || count < 1 || count > 50) {
       return res.status(400).json({ message: "Question count must be between 1 and 50" });
     }
-
     if (!Number.isInteger(timer) || timer < 2 || timer > 120) {
       return res.status(400).json({ message: "Time per question must be between 2 and 120 seconds" });
     }
-
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({ message: "AI service is not configured on the server" });
     }
 
+    // Repeated AI quiz creation should not keep asking the model the same questions.
+    // We only use the user's previously saved quizzes, so one user's history does not
+    // leak into another user's generation context.
+    const escapedTopic = cleanTopic.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const previousQuizzes = await Quiz.find({
+      ownerId: req.user.id,
+      topic: { $regex: new RegExp(`^${escapedTopic}$`, "i") },
+      difficulty: cleanDifficulty,
+      creationMethod: "ai",
+    })
+      .sort({ createdAt: -1 })
+      .select("questions.questionText questions.options questions.explanation")
+      .limit(20)
+      .lean();
+
+    // Keep the prompt context bounded, but keep exact-duplicate checking against
+    // every saved question we fetched. We do NOT try to make every question
+    // semantically different: similar/related questions are allowed.
+    const previousQuestions = previousQuizzes
+      .flatMap((quiz) => quiz.questions || [])
+      .map((q) => ({
+        questionText: String(q.questionText || "").trim(),
+        options: Array.isArray(q.options) ? q.options.slice(0, 4) : [],
+      }))
+      .filter((q) => q.questionText);
+
+    // Only the most recent questions are sent to Gemini so repeated generations
+    // do not make the prompt grow without limit. Exact duplicates are still
+    // checked against the complete fetched set below.
+    const previousQuestionsForPrompt = previousQuestions.slice(0, 40);
+
+    const variationStyles = [
+      "conceptual understanding",
+      "code/output based",
+      "real-world scenario/application",
+      "debugging/error diagnosis",
+      "comparison/distinction",
+      "reasoning/why-how",
+      "best-practice/design choice",
+      "short case study",
+    ];
+
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const model = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
 
-    const prompt = `You are a quiz-generation engine. Generate accurate educational multiple-choice quizzes.
-Create a ${cleanDifficulty} difficulty quiz about: ${cleanTopic}.
+    const normalizeText = (value) => String(value || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const meaningfulTokens = (value) => new Set(
+      normalizeText(value)
+        .split(" ")
+        .filter((word) => word.length > 2 && !new Set([
+          "what", "which", "where", "when", "why", "how", "does", "this", "that",
+          "these", "those", "from", "with", "into", "used", "use", "following", "given",
+          "true", "false", "correct", "best", "most", "least", "about", "question",
+        ]).has(word))
+    );
+
+    const similarity = (a, b) => {
+      const left = meaningfulTokens(a);
+      const right = meaningfulTokens(b);
+      if (!left.size || !right.size) return normalizeText(a) === normalizeText(b) ? 1 : 0;
+      let intersection = 0;
+      for (const token of left) if (right.has(token)) intersection += 1;
+      return intersection / (left.size + right.size - intersection);
+    };
+
+    // Important: similarity is intentionally NOT used as a blocker.
+    // Two questions can test the same concept in different ways, and that is
+    // valid variety for a repeated quiz on the same topic. Only an exact
+    // normalized question is rejected.
+    const isExactDuplicateQuestion = (candidate, existing) => {
+      const normalizedCandidate = normalizeText(candidate);
+      return existing.some((old) => normalizeText(old) === normalizedCandidate);
+    };
+
+    let previousContext = "No previous saved AI questions exist for this topic.";
+    if (previousQuestionsForPrompt.length) {
+      previousContext = previousQuestionsForPrompt
+        .map((q, index) => `${index + 1}. ${q.questionText}`)
+        .join("\n");
+    }
+
+    const generateOnce = async (retryNumber) => {
+      const retryInstruction = retryNumber > 0
+        ? `This is regeneration attempt ${retryNumber}. One or more generated questions were EXACT repeats of earlier questions. Keep the same requested topic and replace only the exact repeats with fresh questions from that same topic. Similar concepts and related questions are allowed.`
+        : "";
+
+      const prompt = `You are a high-quality quiz-generation engine.
+Create a ${cleanDifficulty} difficulty multiple-choice quiz about: ${cleanTopic}.
 Generate exactly ${count} questions.
 The application timer for every question is ${timer} seconds.
+
+VARIETY + TOPIC FIDELITY REQUIREMENT:
+- The requested topic is a HARD boundary: ${cleanTopic}. Every question must directly test, apply, or reason about this topic.
+- NEVER switch to a different subject, neighboring chapter, broad category, or unrelated subtopic just to create variety.
+- If the topic has limited room for novelty, stay within the topic and create a different scenario, wording, example, code/output, application, comparison, or reasoning question.
+- This may be the user's second, third, or later quiz on the same topic. Some questions may be similar or closely related; that is acceptable.
+- Avoid ONLY exact repeats of previous questions. Do not treat a merely similar question as a duplicate.
+- Mix question styles where appropriate: ${variationStyles.join(", ")}. Variety means different ways of testing the SAME requested topic, not adding other topics.
+- Keep the requested difficulty consistent.
+${retryInstruction}
+
+PREVIOUS SAVED QUESTIONS (reference only; stay within the requested topic):
+${previousContext}
+
 Additional instructions: ${extraInstructions || "None"}
 
 Rules:
@@ -138,91 +259,112 @@ Rules:
 - Do not change the requested timer.
 - Return only data matching the requested JSON schema.`;
 
-    const response = await ai.models.generateContent({
-      model,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "object",
-          properties: {
-            title: { type: "string" },
-            description: { type: "string" },
-            topic: { type: "string" },
-            difficulty: { type: "string", enum: ["easy", "medium", "hard"] },
-            questions: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  questionText: { type: "string" },
-                  options: {
-                    type: "array",
-                    items: { type: "string" },
-                    minItems: 4,
-                    maxItems: 4,
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              description: { type: "string" },
+              topic: { type: "string" },
+              difficulty: { type: "string", enum: ["easy", "medium", "hard"] },
+              questions: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    questionText: { type: "string" },
+                    options: {
+                      type: "array",
+                      items: { type: "string" },
+                      minItems: 4,
+                      maxItems: 4,
+                    },
+                    correctAnswerIndex: { type: "integer", minimum: 0, maximum: 3 },
+                    explanation: { type: "string" },
                   },
-                  correctAnswerIndex: { type: "integer", minimum: 0, maximum: 3 },
-                  explanation: { type: "string" },
+                  required: ["questionText", "options", "correctAnswerIndex", "explanation"],
                 },
-                required: ["questionText", "options", "correctAnswerIndex", "explanation"],
               },
             },
+            required: ["title", "description", "topic", "difficulty", "questions"],
           },
-          required: ["title", "description", "topic", "difficulty", "questions"],
         },
-      },
-    });
-
-    const raw = response.text;
-    let generated;
-
-    try {
-      generated = JSON.parse(raw);
-    } catch (parseError) {
-      console.error("Gemini returned invalid JSON:", parseError.message);
-      return res.status(502).json({ message: "AI returned an invalid quiz format. Please try again." });
-    }
-
-    if (!generated || !Array.isArray(generated.questions)) {
-      return res.status(502).json({ message: "AI returned an invalid quiz structure. Please try again." });
-    }
-
-    if (generated.questions.length !== count) {
-      return res.status(502).json({
-        message: `AI generated ${generated.questions.length} questions instead of ${count}. Please try again.`,
       });
-    }
 
-    const questions = generated.questions.map((q, index) => {
-      const questionText = String(q?.questionText || "").trim();
-      const options = Array.isArray(q?.options)
-        ? q.options.map((option) => String(option || "").trim())
-        : [];
-      const correctAnswerIndex = Number(q?.correctAnswerIndex);
-      const explanation = String(q?.explanation || "").trim();
+      let generated;
+      try {
+        generated = JSON.parse(response.text);
+      } catch (parseError) {
+        throw new Error("AI returned an invalid quiz format. Please try again.");
+      }
 
-      if (!questionText) throw new Error(`AI question ${index + 1} is empty`);
-      if (options.length !== 4 || options.some((option) => !option)) {
-        throw new Error(`AI question ${index + 1} must have exactly 4 filled options`);
+      if (!generated || !Array.isArray(generated.questions) || generated.questions.length !== count) {
+        throw new Error(`AI generated an invalid number of questions. Please try again.`);
       }
-      if (new Set(options.map((option) => option.toLowerCase())).size !== 4) {
-        throw new Error(`AI question ${index + 1} contains duplicate options`);
-      }
-      if (!Number.isInteger(correctAnswerIndex) || correctAnswerIndex < 0 || correctAnswerIndex > 3) {
-        throw new Error(`AI question ${index + 1} has an invalid correct answer`);
+
+      const questions = generated.questions.map((q, index) => {
+        const questionText = String(q?.questionText || "").trim();
+        const options = Array.isArray(q?.options)
+          ? q.options.map((option) => String(option || "").trim())
+          : [];
+        const correctAnswerIndex = Number(q?.correctAnswerIndex);
+        const explanation = String(q?.explanation || "").trim();
+
+        if (!questionText) throw new Error(`AI question ${index + 1} is empty`);
+        if (options.length !== 4 || options.some((option) => !option)) {
+          throw new Error(`AI question ${index + 1} must have exactly 4 filled options`);
+        }
+        if (new Set(options.map((option) => option.toLowerCase())).size !== 4) {
+          throw new Error(`AI question ${index + 1} contains duplicate options`);
+        }
+        if (!Number.isInteger(correctAnswerIndex) || correctAnswerIndex < 0 || correctAnswerIndex > 3) {
+          throw new Error(`AI question ${index + 1} has an invalid correct answer`);
+        }
+
+        return {
+          questionText,
+          options,
+          correctAnswerIndex,
+          explanation,
+          imageUrl: "",
+          timeLimit: timer,
+        };
+      });
+
+      const allExisting = previousQuestions.map((q) => q.questionText);
+      const seenThisQuiz = [];
+      const duplicates = [];
+      for (const question of questions) {
+        if (isExactDuplicateQuestion(question.questionText, allExisting) || isExactDuplicateQuestion(question.questionText, seenThisQuiz)) {
+          duplicates.push(question.questionText);
+        }
+        seenThisQuiz.push(question.questionText);
       }
 
       return {
-        questionText,
-        options,
-        correctAnswerIndex,
-        explanation,
-        imageUrl: "",
-        timeLimit: timer,
+        generated,
+        questions,
+        duplicates,
       };
-    });
+    };
 
+    let result = await generateOnce(0);
+    const regenerated = result.duplicates.length > 0;
+    if (regenerated) {
+      result = await generateOnce(1);
+    }
+
+    if (result.duplicates.length) {
+      return res.status(502).json({
+        message: "AI repeated one or more exact questions from an earlier quiz. Please generate again; related or similar questions are allowed, but exact repeats are not.",
+      });
+    }
+
+    const generated = result.generated;
     const title = String(generated.title || `${cleanTopic} Quiz`).trim().slice(0, 150);
     const description = String(generated.description || `AI-generated quiz about ${cleanTopic}.`).trim().slice(0, 1000);
 
@@ -234,7 +376,15 @@ Rules:
       creationMethod: "ai",
       status: "draft",
       timePerQuestion: timer,
-      questions,
+      questions: result.questions,
+      variety: {
+        previousSavedQuestionCount: previousQuestions.length,
+        previousQuestionsUsedAsPromptContext: previousQuestionsForPrompt.length,
+        duplicateRule: "exact-only",
+        topicLocked: true,
+        duplicateCheckPassed: true,
+        regenerated,
+      },
     });
   } catch (err) {
     console.error("Gemini quiz generation error:", err);
@@ -422,6 +572,8 @@ router.post("/host-draft", authMiddleware, async (req, res) => {
       roomCode,
       host: req.user.id,
       hostName: req.user.name,
+      title: data.title,
+      quizId: req.body.quizId || undefined,
       questions: data.questions.map((q) => ({
         questionText: q.questionText,
         options: q.options,
@@ -429,6 +581,7 @@ router.post("/host-draft", authMiddleware, async (req, res) => {
         imageUrl: q.imageUrl || "",
         imagePrompt: q.imagePrompt || "",
         timeLimit: q.timeLimit,
+        explanation: q.explanation || "",
       })),
     });
 
@@ -455,11 +608,17 @@ router.post("/submit-draft", authMiddleware, async (req, res) => {
       const isCorrect = selectedIndex === correctAnswerIndex;
       if (isCorrect) score += 1;
 
+      const options = Array.isArray(answer.options)
+        ? answer.options.map((option) => String(option || ""))
+        : [];
+
       return {
         questionText: String(answer.questionText || ""),
+        options,
         selectedIndex,
         correctAnswerIndex,
         imageUrl: String(answer.imageUrl || ""),
+        explanation: String(answer.explanation || ""),
         isCorrect,
       };
     });
@@ -467,9 +626,17 @@ router.post("/submit-draft", authMiddleware, async (req, res) => {
     const result = await Result.create({
       user: req.user.id,
       score,
+      points: score,
       totalQuestions: answers.length,
       category: category || "General",
+      quizTitle: String(req.body.quizTitle || category || "General Quiz").trim(),
+      quizId: req.body.quizId || undefined,
+      source: req.body.quizId ? "saved-quiz" : "solo",
+      detailsRetained: true,
+      breakdown,
     });
+
+    await trimDetailedHistory(req.user.id);
 
     res.json({
       message: "Quiz submitted successfully",
@@ -483,6 +650,103 @@ router.post("/submit-draft", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error submitting quiz" });
   }
 });
+
+// PARTICIPANT HISTORY: solo + multiplayer attempts.
+router.get("/history", authMiddleware, async (req, res) => {
+  try {
+    const [solo, multiplayer] = await Promise.all([
+      Result.find({ user: req.user.id })
+        .sort({ createdAt: -1, _id: -1 })
+        .select("quizId quizTitle score points rank totalQuestions category source detailsRetained createdAt")
+        .lean(),
+      RoomResult.find({ user: req.user.id })
+        .sort({ createdAt: -1, _id: -1 })
+        .select("room roomCode participantName score points correctAnswers totalQuestions rank detailsRetained createdAt breakdown")
+        .lean(),
+    ]);
+
+    const soloItems = solo.map((item) => ({
+      ...item,
+      kind: "solo",
+      historyId: item._id,
+      points: item.points ?? item.score ?? 0,
+    }));
+
+    const roomItems = multiplayer.map((item) => ({
+      ...item,
+      kind: "multiplayer",
+      historyId: item._id,
+      quizTitle: item.roomCode ? `Live Quiz • ${item.roomCode}` : "Live Quiz",
+      points: item.score ?? 0,
+      score: item.correctAnswers ?? 0,
+      category: "Multiplayer",
+      source: "multiplayer",
+      detailsRetained: Boolean(item.breakdown?.length),
+    }));
+
+    const merged = [...soloItems, ...roomItems]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Never expose the room breakdown in the list payload.
+    res.json(merged.map(({ breakdown, ...item }) => item));
+  } catch (err) {
+    console.error("Quiz history error:", err);
+    res.status(500).json({ message: "Server error fetching quiz history" });
+  }
+});
+
+// Detailed multiplayer review.
+router.get("/history/room/:id", authMiddleware, async (req, res) => {
+  try {
+    const result = await RoomResult.findOne({
+      _id: req.params.id,
+      user: req.user.id,
+    }).lean();
+
+    if (!result) return res.status(404).json({ message: "Multiplayer history item not found" });
+    if (!result.breakdown?.length) {
+      return res.status(410).json({
+        message: "Detailed review is not available for this older multiplayer attempt. Score, rank and points are still available.",
+        summaryOnly: true,
+      });
+    }
+
+    res.json({
+      ...result,
+      kind: "multiplayer",
+      quizTitle: `Live Quiz • ${result.roomCode}`,
+      points: result.score,
+      score: result.correctAnswers,
+    });
+  } catch (err) {
+    console.error("Multiplayer history detail error:", err);
+    res.status(400).json({ message: "Invalid multiplayer history ID" });
+  }
+});
+
+// Detailed solo review is available only while the attempt is inside the newest 7.
+router.get("/history/:id", authMiddleware, async (req, res) => {
+  try {
+    const result = await Result.findOne({
+      _id: req.params.id,
+      user: req.user.id,
+    }).lean();
+
+    if (!result) return res.status(404).json({ message: "History item not found" });
+    if (!result.detailsRetained) {
+      return res.status(410).json({
+        message: "Detailed review expired. Score, points and rank are still available in history.",
+        summaryOnly: true,
+      });
+    }
+
+    res.json({ ...result, kind: "solo" });
+  } catch (err) {
+    console.error("Quiz history detail error:", err);
+    res.status(400).json({ message: "Invalid history ID" });
+  }
+});
+
 
 // GET one quiz owned by the authenticated user
 router.get("/:id", authMiddleware, async (req, res) => {
@@ -582,6 +846,8 @@ router.post("/:id/host", authMiddleware, async (req, res) => {
       roomCode,
       host: req.user.id,
       hostName: req.user.name,
+      title: quiz.title,
+      quizId: quiz._id,
       questions: quiz.questions.map((q) => ({
         questionText: q.questionText,
         options: q.options,
@@ -589,6 +855,7 @@ router.post("/:id/host", authMiddleware, async (req, res) => {
         imageUrl: q.imageUrl || "",
         imagePrompt: q.imagePrompt || "",
         timeLimit: q.timeLimit,
+        explanation: q.explanation || "",
       })),
     });
 
