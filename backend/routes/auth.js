@@ -24,10 +24,16 @@ const makeToken = (user) =>
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
   );
-const resendConfigured = Boolean(
-  process.env.RESEND_API_KEY &&
-  process.env.RESEND_FROM_EMAIL
-);
+const resendConfigured =
+  !!process.env.RESEND_API_KEY &&
+  !!process.env.RESEND_FROM_EMAIL;
+
+console.log("RESEND CHECK:", {
+  configured: resendConfigured,
+  hasKey: !!process.env.RESEND_API_KEY,
+  hasFrom: !!process.env.RESEND_FROM_EMAIL,
+  from: process.env.RESEND_FROM_EMAIL || "MISSING",
+});
 
 console.log("=== RESEND CONFIG CHECK ===");
 console.log(
